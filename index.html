@@ -34,23 +34,31 @@
   #transport button { background: #1b1b2a; color: #fff; border: 1px solid #34344a; border-radius: 6px; padding: 9px 12px; min-height: 38px; font: 600 13px "Outfit", system-ui, sans-serif; cursor: pointer; }
     #custom { touch-action: none; cursor: ew-resize; user-select: none; -webkit-user-select: none; }
   #transport button:active, #transport button.on { background: #2b22d6; border-color: #6f7bff; }
-  #scrub { flex: 1 1 160px; min-width: 120px; accent-color: #ffe01f; }
-  #clock { font: 500 12px ui-monospace, monospace; min-width: 0; text-align: right; opacity: .8; }
+  #bar { display: flex; align-items: center; gap: 8px; margin-top: 6px; height: 22px; }
+  #play { flex: none; width: 22px; height: 22px; padding: 0; border: 0; background: none; color: #fff; cursor: pointer; display: grid; place-items: center; opacity: .85; }
+  #play svg { width: 12px; height: 12px; fill: currentColor; display: block; }
+  #scrub { flex: 1; min-width: 0; height: 22px; margin: 0; background: none; cursor: pointer; -webkit-appearance: none; appearance: none; }
+  #scrub::-webkit-slider-runnable-track { height: 3px; border-radius: 2px; background: linear-gradient(#ffe01f, #ffe01f) 0 / var(--done, 0%) 100% no-repeat, #34344a; }
+  #scrub::-moz-range-track { height: 3px; border-radius: 2px; background: #34344a; }
+  #scrub::-moz-range-progress { height: 3px; border-radius: 2px; background: #ffe01f; }
+  #scrub::-webkit-slider-thumb { -webkit-appearance: none; width: 11px; height: 11px; margin-top: -4px; border-radius: 50%; background: #ffe01f; }
+  #scrub::-moz-range-thumb { width: 11px; height: 11px; border: 0; border-radius: 50%; background: #ffe01f; }
   /* ---------- side panel ---------- */
   #side { min-width: 0; }
-  #tabs { display: flex; gap: 4px; overflow-x: auto; padding: 6px; background: #14141f; border-radius: 8px 8px 0 0; border-bottom: 1px solid #26263a; scrollbar-width: none; }
-  #tabs button { flex: 1 0 auto; padding: 10px 12px; border: 0; border-radius: 6px; background: transparent; color: #a9a9c2; font: 600 13px "Outfit", system-ui, sans-serif; cursor: pointer; }
+  #tabs { display: flex; gap: 2px; padding: 6px; background: #14141f; border-radius: 8px 8px 0 0; border-bottom: 1px solid #26263a; scrollbar-width: none; }
+  #tabs button { flex: 1 1 0; min-width: 0; padding: 10px 0; border: 0; border-radius: 6px; background: transparent; color: #a9a9c2; font: 600 clamp(10.5px, 3vw, 13px) "Outfit", system-ui, sans-serif; cursor: pointer; }
   #tabs button[aria-selected="true"] { background: #2b22d6; color: #fff; }
-  .panel { background: #14141f; padding: 6px 12px 12px; border-radius: 0 0 8px 8px; }
+  .panel { background: #14141f; padding: 6px clamp(6px, 2vw, 12px) 12px; border-radius: 0 0 8px 8px; }
   .panel[hidden] { display: none; }
-  #tracks { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; padding: 8px 0 4px; }
+  #tracks { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; padding: 8px 0 4px; }
   #tracks button { padding: 11px 2px; border: 1px solid #34344a; border-radius: 6px; background: #1b1b2a; color: #fff; font: 600 12px "Outfit", system-ui, sans-serif; cursor: pointer; }
   #tracks button.on { background: #2b22d6; border-color: #6f7bff; }
-  /* Snapseed-style dials: a grid of parameter buttons, three rows deep. Press and
+  /* Snapseed-style dials: a grid of parameter buttons, four rows deep. Press and
      hold one and drag sideways to change it; a read-out appears over the picture. */
-  .dials { display: grid; grid-template-rows: repeat(3, 52px); grid-auto-flow: column; grid-auto-columns: minmax(80px, 1fr); gap: 6px; overflow-x: auto; padding: 8px 0 4px; scrollbar-width: thin; }
-  .dial { position: relative; overflow: hidden; display: flex; flex-direction: column; justify-content: center; gap: 2px; padding: 0 8px; text-align: left; border: 1px solid #34344a; border-radius: 8px; background: #1b1b2a; color: #fff; font: 600 12px "Outfit", system-ui, sans-serif; cursor: ew-resize; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
-  .dial .v { font: 11px ui-monospace, monospace; opacity: .6; }
+  .dials { display: grid; grid-template-rows: repeat(4, 52px); grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 6px; padding: 8px 0 4px; }   /* every dial always fits: columns share the width, nothing scrolls off */
+  .dials.grouped { grid-template-rows: none; grid-auto-flow: row; grid-template-columns: repeat(4, minmax(0, 1fr)); grid-auto-rows: 52px; margin-top: 8px; padding: 6px; border-radius: 12px; background: rgba(255,255,255,.07); }
+  .dial { position: relative; overflow: hidden; display: flex; flex-direction: column; justify-content: center; gap: 2px; min-width: 0; padding: 0 8px; line-height: 1.1; text-align: left; border: 1px solid #34344a; border-radius: 8px; background: #1b1b2a; color: #fff; font: 600 12px "Outfit", system-ui, sans-serif; cursor: ew-resize; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+  .dial .v { font: 11px ui-monospace, monospace; opacity: .6; white-space: nowrap; overflow: hidden; }
   .dial .fill { position: absolute; left: 0; bottom: 0; height: 3px; background: #ffe01f; }
   .dial.active { border-color: #ffe01f; background: #23233a; }
   .dial.toggle, .dial.swatch { cursor: pointer; touch-action: manipulation; }
@@ -88,11 +96,11 @@
         <div id="logos" class="empty"><img id="logoA" alt="" hidden><span class="div" hidden></span><img id="logoB" alt="" hidden></div>
       </div>
     </div>
-    <div id="transport">
-      <button id="play">Pause</button>
-      <button id="sound">Tap for sound</button>
+    <div id="bar">
+      <button id="play" aria-label="Pause"></button>
       <input id="scrub" type="range" min="0" max="14" step="0.01" value="0" aria-label="Timeline">
-      <span id="clock">0.00 / 14.00</span>
+    </div>
+    <div id="transport">
       <button data-aspect="16:9">16:9</button>
       <button data-aspect="9:16">9:16</button>
       <button data-aspect="4:5">4:5</button>
@@ -657,15 +665,18 @@ function update(t) {
 }
 
 /* =====================================================================
-   8. MUSIC  – four generative tracks, synthesised live with Web Audio.
+   8. MUSIC  – three generative tracks, synthesised live with Web Audio.
    Nothing is sampled. Every bar re-reads the dials, so the sound follows them.
    ===================================================================== */
 const Music = (() => {
-  let ctx = null, master, tone, comp, revIn, delIn, delay, delFb, noiseBuf, analyser;
+  let ctx = null, master, tone, comp, bus = null, irBuf, revIn, delIn, delay, delFb, noiseBuf, analyser;
   let timer = null, step = 0, nextT = 0, style = "off", live = { blur: 0, heat: 0 };
   const mtof = m => 440 * Math.pow(2, (m - 69) / 12);
   const PENTA = [0, 3, 5, 7, 10], DORIAN = [0, 2, 3, 5, 7, 9, 10];
   const pick = a => a[Math.floor(Math.random() * a.length)];
+  // i7, VI, III, VII in open voicings: every note sits in one natural-minor key, so nothing rubs
+  const PROG = [[0, 7, 10, 15, 19], [-4, 3, 8, 12, 15], [3, 10, 15, 19, 22], [-2, 5, 10, 14, 17]];
+  let sounding = PROG[0];           // the chord playing now; bells only use its notes
 
   /* ---- how the dials drive the sound ---- */
   function dials() {
@@ -694,19 +705,27 @@ const Music = (() => {
     comp = ctx.createDynamicsCompressor(); comp.threshold.value = -14; comp.ratio.value = 5; comp.attack.value = 0.004; comp.release.value = 0.18;
     analyser = ctx.createAnalyser(); analyser.fftSize = 2048;
     master.connect(tone); tone.connect(comp); comp.connect(analyser); comp.connect(ctx.destination);
-    // reverb: a generated noise tail
+    // reverb impulse: a generated noise tail
     const len = Math.floor(ctx.sampleRate * 3.4), ir = ctx.createBuffer(2, len, ctx.sampleRate);
     for (let c = 0; c < 2; c++) { const d = ir.getChannelData(c); for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 2.6); }
-    const rev = ctx.createConvolver(); rev.buffer = ir; revIn = ctx.createGain(); revIn.connect(rev); rev.connect(master);
-    // echo
-    delay = ctx.createDelay(2); delFb = ctx.createGain(); delIn = ctx.createGain();
-    const delTone = ctx.createBiquadFilter(); delTone.type = "lowpass"; delTone.frequency.value = 3200;
-    delIn.connect(delay); delay.connect(delTone); delTone.connect(delFb); delFb.connect(delay); delTone.connect(master); delTone.connect(revIn);
+    irBuf = ir;
     noiseBuf = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
     const n = noiseBuf.getChannelData(0); for (let i = 0; i < n.length; i++) n[i] = Math.random() * 2 - 1;
   }
+  /* Every track plays into its own bus (voices, reverb and echo). Switching tracks
+     fades the old bus out in about a quarter of a second, tails and all, and starts
+     the new track on a fresh one, so nothing from the old track hangs over. */
+  function newBus() {
+    const now = ctx.currentTime;
+    if (bus) { const old = bus; old.gain.cancelScheduledValues(now); old.gain.setTargetAtTime(0, now, 0.05); setTimeout(() => { try { old.disconnect(); } catch (e) {} }, 700); }
+    bus = ctx.createGain(); bus.gain.setValueAtTime(0, now); bus.gain.linearRampToValueAtTime(1, now + 0.12); bus.connect(master);
+    const rev = ctx.createConvolver(); rev.buffer = irBuf; revIn = ctx.createGain(); revIn.connect(rev); rev.connect(bus);
+    delay = ctx.createDelay(2); delFb = ctx.createGain(); delIn = ctx.createGain();
+    const delTone = ctx.createBiquadFilter(); delTone.type = "lowpass"; delTone.frequency.value = 3200;
+    delIn.connect(delay); delay.connect(delTone); delTone.connect(delFb); delFb.connect(delay); delTone.connect(bus); delTone.connect(revIn);
+  }
   function out(node, rev, del) {
-    node.connect(master);
+    node.connect(bus);
     if (rev > 0) { const g = ctx.createGain(); g.gain.value = rev; node.connect(g); g.connect(revIn); }
     if (del > 0) { const g = ctx.createGain(); g.gain.value = del; node.connect(g); g.connect(delIn); }
   }
@@ -723,7 +742,8 @@ const Music = (() => {
     osc.connect(f); f.connect(g); out(g, o.rev || 0, o.del || 0); osc.start(t); osc.stop(end + 0.05);
   }
   function chord(t, notes, o, D) {  // stacked, detuned notes
-    notes.forEach((n, i) => { synth(t, Object.assign({}, o, { note: n, det: (i % 2 ? 1 : -1) * D.detune })); if (o.wide) synth(t, Object.assign({}, o, { note: n, det: (i % 2 ? -1 : 1) * D.detune * 0.6, vol: o.vol * 0.7 })); });
+    const dt = D.detune * (o.detScale || 1);
+    notes.forEach((n, i) => { synth(t, Object.assign({}, o, { note: n, det: (i % 2 ? 1 : -1) * dt })); if (o.wide) synth(t, Object.assign({}, o, { note: n, det: (i % 2 ? -1 : 1) * dt * 0.6, vol: o.vol * 0.7 })); });
   }
   function hiss(t, o) {             // filtered noise burst: hats, snares, clicks
     const src = ctx.createBufferSource(); src.buffer = noiseBuf; src.loop = true;
@@ -751,15 +771,15 @@ const Music = (() => {
   const TRACKS = {
     ambient: { bpm: 66, step(i, t, D, sd) {
       const bar = 32 / D.move, k = 50 + D.root;
-      const prog = [[0, 7, 10, 14, 17], [-4, 3, 7, 10, 14], [-2, 5, 8, 12, 15], [-7, 0, 7, 9, 16]];
       if (i % bar === 0) {
-        const c = prog[Math.floor(i / bar) % 4].map(n => k + n);
-        chord(t, c, { type: "sawtooth", dur: sd * bar * 0.9, a: sd * 6, r: sd * 14, vol: 0.05, cut: D.cut * 0.45, q: D.q * 0.4, rev: 0.5 + D.wet, wide: true }, D);
-        synth(t, { type: "sine", note: c[0] - 12, dur: sd * bar, a: sd * 4, r: sd * 8, vol: 0.12, cut: 800 });
+        sounding = PROG[Math.floor(i / bar) % 4];
+        const c = sounding.map(n => k + n);
+        chord(t, c, { type: "triangle", dur: sd * bar * 0.9, a: sd * 6, r: sd * 7, vol: 0.075, cut: D.cut * 0.5, q: 0.5, rev: 0.5 + D.wet, wide: true, detScale: 0.3 }, D);
+        synth(t, { type: "sine", note: c[0] - 12, dur: sd * bar * 0.9, a: sd * 4, r: sd * 5, vol: 0.12, cut: 800 });
       }
       if (Math.random() < 0.08 + D.dense * 0.3) {
-        const n = k + 24 + pick(PENTA) + pick([0, 0, 12]);
-        synth(t, { type: Math.random() < 0.5 ? "sine" : "triangle", note: n, dur: 0.05, r: 1.6 + D.wet * 2, vol: 0.05 + D.hit * 0.03, cut: D.cut * 1.5, rev: 0.4 + D.wet, del: 0.5 });
+        const n = k + 12 + pick(sounding) + pick([0, 12]);
+        synth(t, { type: "sine", note: n, dur: 0.05, r: 1.6 + D.wet * 2, vol: 0.05 + D.hit * 0.03, cut: D.cut * 1.5, rev: 0.4 + D.wet, del: 0.4 });
       }
     } },
 
@@ -774,20 +794,6 @@ const Music = (() => {
       const deg = motif[(s + (Math.floor(bar / 4) % 4) * 3) % 16];
       if (deg >= 0 && Math.random() < 0.55 + D.dense * 0.45)
         synth(t, { type: "square", note: k + 24 + PENTA[deg], dur: sd * 0.4, r: 0.12, vol: 0.05, cut: D.cut * 0.6, q: 1 + D.q * 0.5, fenv: 1.5, fdec: 0.08, del: 0.35, rev: D.wet * 0.5 });
-    } },
-
-    tech: { bpm: 132, step(i, t, D, sd) {
-      const s = i % 16, bar = Math.floor(i / 16), k = 41 + D.root;
-      if (s % 4 === 0) { kick(t, 0.75 + D.hit * 0.2, 190, 0.32); hiss(t, { type: "lowpass", f: 140, vol: 0.25 * D.hit, dur: sd * 3, rev: 0.3 }); }
-      hat(t, s % 4 === 2 ? 0.16 : (Math.random() < 0.3 + D.dense * 0.7 ? 0.07 : 0), D, s % 4 === 2 && D.glass < 0.75);
-      if (s === 4 || s === 12) { hiss(t, { type: "bandpass", f: 1300, q: 1.5, vol: 0.2 + D.hit * 0.1, dur: 0.14, rev: 0.25 + D.wet * 0.5 }); }
-      if (s % 4 !== 0) {            // rolling off-beat bass with a squelchy filter
-        const n = k + (s === 7 ? 12 : s === 14 && bar % 2 ? 10 : s === 11 && bar % 4 === 3 ? 3 : 0);
-        synth(t, { type: "sawtooth", note: n, dur: sd * 0.55, r: 0.04, vol: 0.2, cut: 120 + D.cut * 0.3, q: 2 + D.q * 1.6, fenv: 2.5, fdec: 0.09 });
-      }
-      if ((s === 3 || s === 11) && bar % 2 === 1)
-        chord(t, [k + 24, k + 27, k + 31, k + 34], { type: "square", dur: sd * 0.6, r: 0.18, vol: 0.035, cut: D.cut * 0.7, q: 1 + D.q * 0.4, fenv: 1, del: 0.5, rev: D.wet * 0.6 }, D);
-      if (bar % 8 === 7 && s >= 12) hiss(t, { type: "highpass", f: 3000 + s * 500, vol: 0.06 * (s - 11), dur: sd, rev: 0.4 });
     } },
 
     jungle: { bpm: 168, step(i, t, D, sd) {
@@ -807,11 +813,11 @@ const Music = (() => {
       // wide pads and a far-off bell
       const span = 64 / D.move;
       if (i % span === 0) {
-        const c = [[0, 7, 10, 14, 15], [-4, 3, 8, 10, 15], [-2, 5, 9, 12, 17], [-5, 2, 7, 10, 14]][Math.floor(i / span) % 4].map(n => k + 24 + n);
-        chord(t, c, { type: "sawtooth", dur: sd * span * 0.92, a: sd * 8, r: sd * 16, vol: 0.028, cut: D.cut * 0.4, q: D.q * 0.3, rev: 0.6 + D.wet, wide: true }, D);
+        sounding = PROG[Math.floor(i / span) % 4]; const c = sounding.map(n => k + 24 + n);
+        chord(t, c, { type: "sawtooth", dur: sd * span * 0.92, a: sd * 8, r: sd * 10, vol: 0.028, cut: D.cut * 0.4, q: D.q * 0.3, rev: 0.6 + D.wet, wide: true, detScale: 0.5 }, D);
       }
       if ((s === 6 || s === 14) && Math.random() < 0.25 + D.dense * 0.3)
-        synth(t, { type: "sine", note: k + 48 + pick(DORIAN), dur: 0.04, r: 1.2, vol: 0.04, cut: 9000, rev: 0.6 + D.wet, del: 0.6 });
+        synth(t, { type: "sine", note: k + 36 + pick(sounding), dur: 0.04, r: 1.2, vol: 0.04, cut: 9000, rev: 0.6 + D.wet, del: 0.6 });
     } },
   };
 
@@ -832,7 +838,8 @@ const Music = (() => {
       if (ctx.state === "suspended") ctx.resume();
       clearInterval(timer); timer = null;
       master.gain.cancelScheduledValues(ctx.currentTime);
-      if (name === "off") { master.gain.setTargetAtTime(0, ctx.currentTime, 0.08); return true; }
+      if (name === "off") { master.gain.setTargetAtTime(0, ctx.currentTime, 0.05); return true; }
+      newBus();
       master.gain.setTargetAtTime(P.volume, ctx.currentTime, 0.05);
       step = 0; nextT = ctx.currentTime + 0.08; timer = setInterval(tick, 25); tick();
       return true;
@@ -855,9 +862,9 @@ const Music = (() => {
 /* Each shot is authored at its own natural length; "Loop length" stretches the
    whole assembled sequence to that many real seconds. */
 let head = 0, playing = true, last = performance.now();   // head = real seconds into the loop
-const scrub = el("scrub"), clock = el("clock"), playBtn = el("play");
+const scrub = el("scrub"), playBtn = el("play");
 const internal = () => head / P.loopLength * SEQ.total;
-function showClock() { scrub.max = P.loopLength; scrub.value = head; clock.textContent = head.toFixed(2) + " / " + P.loopLength.toFixed(2); }
+function showClock() { scrub.max = P.loopLength; scrub.value = head; scrub.style.setProperty("--done", (head / P.loopLength * 100).toFixed(2) + "%"); }
 function setShots() {                       // re-assemble the sequence; loop length follows its natural length
   SEQ = buildSequence(P.shots); P.loopLength = Math.round(SEQ.total * 2) / 2; head = 0;
   for (const c of chars) c.last = -1;
@@ -866,12 +873,17 @@ function tick(now) {
   const dt = Math.min(0.1, (now - last) / 1000); last = now;
   if (playing) head += dt * P.speed;
   head = ((head % P.loopLength) + P.loopLength) % P.loopLength;
-  update(internal()); showClock(); showSound();
+  update(internal()); showClock();
   requestAnimationFrame(tick);
 }
-function setPlaying(v) { playing = v; playBtn.textContent = v ? "Pause" : "Play"; }
+const ICON_PAUSE = '<svg viewBox="0 0 12 12" aria-hidden="true"><rect x="1.5" y="1" width="3.2" height="10"/><rect x="7.3" y="1" width="3.2" height="10"/></svg>';
+const ICON_PLAY = '<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 1v10l8.5-5z"/></svg>';
+function setPlaying(v) { playing = v; playBtn.innerHTML = v ? ICON_PAUSE : ICON_PLAY; playBtn.setAttribute("aria-label", v ? "Pause" : "Play"); }
+setPlaying(true);
 playBtn.onclick = () => setPlaying(!playing);
-scrub.oninput = () => { setPlaying(false); head = parseFloat(scrub.value); };
+let wasPlaying = true, scrubbing = false;
+scrub.oninput = () => { if (!scrubbing) { scrubbing = true; wasPlaying = playing; } playing = false; head = parseFloat(scrub.value); };
+scrub.onchange = () => { scrubbing = false; setPlaying(wasPlaying); };
 /* Formats. The presets fill the available width. "Custom" keeps the picture's
    height fixed and changes only its width, anywhere from 10:2 to 9:16. */
 const CUSTOM_MIN = 9 / 16, CUSTOM_MAX = 10 / 2;
@@ -920,11 +932,14 @@ new ResizeObserver(resize).observe(stage);
 
 /* ---- control tabs: [setting, label, min, max, step] or [setting, label, "text" | "bool" | "color"] ---- */
 const TABS = [
-  { name: "Main", items: [
-    ["loopLength", "Loop (s)", 3, 40, 0.5], ["shots", "Shots", 1, 10, 1], ["speed", "Speed", 0, 3, 0.01], ["hue", "Hue", -180, 180, 1],
-    ["bgHeat", "Heat", -0.5, 0.5, 0.01], ["keyTopHeat", "Hot tops", -1, 1.5, 0.01], ["bgContrast", "Contrast", 0.2, 2, 0.01], ["bgWarp", "Warp", 0, 1.5, 0.01],
-    ["bgFlow", "Flow speed", 1, 4, 1], ["blur", "Blur", 0, 5, 0.01], ["floatDrift", "Float drift", 0, 4, 0.01], ["burstShare", "Keys that lift", 0, 1, 0.01],
-    ["burstHeight", "Burst height", 0, 6, 0.01], ["tumble", "Tumble", 0, 3, 0.01], ["keyOpacity", "Glass opacity", 0.2, 1, 0.01], ["edgeStrength", "Edge lines", 0, 1.5, 0.01] ] },
+  { name: "Main", items: [                     // ["#", name] starts a labelled group
+    ["#", "Animation"],
+    ["loopLength", "Loop (s)", 3, 40, 0.5], ["shots", "Shots", 1, 10, 1], ["speed", "Speed", 0, 3, 0.01], ["blur", "Blur", 0, 5, 0.01],
+    ["burstHeight", "Burst height", 0, 6, 0.01], ["burstShare", "Keys that lift", 0, 1, 0.01], ["tumble", "Tumble", 0, 3, 0.01], ["floatDrift", "Float drift", 0, 4, 0.01],
+    ["#", "Keys"],
+    ["keyTopHeat", "Hot tops", -1, 1.5, 0.01], ["keyOpacity", "Glass opacity", 0.2, 1, 0.01], ["edgeStrength", "Edge lines", 0, 1.5, 0.01], ["rimStrength", "Rim glow", 0, 1.5, 0.01],
+    ["#", "Background"],
+    ["hue", "Hue", -180, 180, 1], ["bgHeat", "Heat", -0.5, 0.5, 0.01], ["bgContrast", "Contrast", 0.2, 2, 0.01], ["bgWarp", "Warp", 0, 1.5, 0.01] ] },
   { name: "Type", items: [
     ["showText", "Show text", "bool"], ["kicker", "Kicker", "text"], ["line1", "Headline 1", "text"], ["line2", "Headline 2", "text"], ["line3", "Headline 3", "text"],
     ["title1", "Title 1", "text"], ["title2", "Title 2", "text"], ["textColor", "Colour", "color"], ["textScale", "Size", 0.5, 1.6, 0.01],
@@ -959,8 +974,12 @@ function refreshControls() { refreshers.forEach(f => f()); }
     const btn = document.createElement("button"); btn.textContent = tab.name; btn.setAttribute("role", "tab"); btn.onclick = () => select(ti); tabBar.appendChild(btn);
     const panel = document.createElement("div"); panel.className = "panel"; panel.setAttribute("role", "tabpanel"); panels.appendChild(panel);
     const fields = document.createElement("div"); fields.className = "fields";
-    const grid = document.createElement("div"); grid.className = "dials";
+    let grid = document.createElement("div"); grid.className = "dials";
     tab.items.forEach(([key, label, a, b, step]) => {
+      if (key === "#") {                                    // a group: its own light box, rows of four
+        if (grid.children.length) panel.appendChild(grid);
+        grid = document.createElement("div"); grid.className = "dials grouped"; grid.setAttribute("role", "group"); grid.setAttribute("aria-label", label); return;
+      }
       let mine = null;
       const changed = () => { if (REBUILD_TEXT.has(key)) buildText(); if (key === "shots") { setShots(); refreshControls(); } refreshers.forEach(f => { if (f.key === key && f !== mine) f(); }); };
       const register = show => { show.key = key; mine = show; refreshers.push(show); show(); };
@@ -1004,7 +1023,7 @@ function refreshControls() { refreshers.forEach(f => f()); }
     if (tab.name === "Logos") panel.appendChild(el("extras"));
     if (tab.name === "Music") {
       const bar = document.createElement("div"); bar.id = "tracks";
-      [["off", "Off"], ["ambient", "Ambient"], ["minimal", "Minimal"], ["tech", "Tech"], ["jungle", "Jungle"]].forEach(([id, name]) => {
+      [["off", "Off"], ["ambient", "Ambient"], ["minimal", "Minimal"], ["jungle", "Jungle"]].forEach(([id, name]) => {
         const b = document.createElement("button"); b.textContent = name; b.dataset.track = id; b.onclick = () => setMusic(id); bar.appendChild(b);
       });
       panel.prepend(bar);
@@ -1018,12 +1037,6 @@ let lastTrack = P.music === "off" ? "ambient" : P.music, soundWanted = P.music !
 function wake() { if (soundWanted && !Music.running) { Music.set(P.music); Music.resume(); } }
 try { if (soundWanted) Music.set(P.music); } catch (e) {}
 for (const ev of ["click", "touchend", "pointerup", "keydown"]) window.addEventListener(ev, wake, true);
-el("sound").onclick = ev => {
-  ev.stopPropagation();
-  if (Music.running) { lastTrack = P.music; soundWanted = false; setMusic("off"); }
-  else { soundWanted = true; setMusic(P.music === "off" ? lastTrack : P.music); Music.resume(); }
-};
-function showSound() { const txt = Music.running ? "Sound on" : P.music === "off" ? "Sound off" : "Tap for sound", b = el("sound"); if (b.textContent !== txt) { b.textContent = txt; b.classList.toggle("on", Music.running); } }
 
 /* ---- logo slots, copy, reset ---- */
 function showLogos() {

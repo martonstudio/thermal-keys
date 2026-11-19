@@ -1,6 +1,6 @@
 # Thermal Keys
 
-A live WebGL motion piece: glass keycaps over a flowing thermal gradient, with real-time controls, 16:9 / 9:16 / 4:5 formats, up to ten automatic shots, and four generative music tracks that follow the dials.
+A live WebGL motion piece: glass keycaps over a flowing thermal gradient, with real-time controls, 16:9 / 9:16 / 4:5 formats, up to ten automatic shots, and three generative music tracks that follow the dials.
 
 Live page: https://martonstudio.github.io/thermal-keys/
 
