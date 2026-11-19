@@ -34,6 +34,16 @@
   #transport button { background: #1b1b2a; color: #fff; border: 1px solid #34344a; border-radius: 6px; padding: 9px 12px; min-height: 38px; font: 600 13px "Outfit", system-ui, sans-serif; cursor: pointer; }
     #custom { touch-action: none; cursor: ew-resize; user-select: none; -webkit-user-select: none; }
   #transport button:active, #transport button.on { background: #2b22d6; border-color: #6f7bff; }
+  /* Desktop (mouse) mode: the picture sits in a fixed-height area and the selected
+     control's slider has a fixed slot under the playback bar, so nothing below ever moves. */
+  #slot { display: none; }
+  body.desk #app { max-width: none; }
+  body.desk #stagebox { height: min(calc((100vw - 20px) * 9 / 16), max(180px, calc(100vh - 128px))); display: flex; align-items: center; justify-content: center; }   /* full width at 16:9, but never so tall that the playback bar and slider leave the window */
+  body.desk #slot { display: grid; grid-template-columns: 130px 1fr 64px; align-items: center; gap: 12px; height: 36px; margin-top: 4px; padding: 0 12px; border-radius: 8px; background: #14141f; font-size: 13px; font-weight: 600; }
+  #slot .val { font: 12px ui-monospace, monospace; text-align: right; opacity: .75; }
+  #slotRange { width: 100%; min-width: 0; margin: 0; accent-color: #ffe01f; cursor: pointer; }
+  body.desk .dial, body.desk #custom { cursor: pointer; touch-action: manipulation; }
+  .dial.sel, #custom.sel { border-color: #ffe01f; }
   #bar { display: flex; align-items: center; gap: 8px; margin-top: 6px; height: 22px; }
   #play { flex: none; width: 22px; height: 22px; padding: 0; border: 0; background: none; color: #fff; cursor: pointer; display: grid; place-items: center; opacity: .85; }
   #play svg { width: 12px; height: 12px; fill: currentColor; display: block; }
@@ -86,6 +96,7 @@
 <body>
 <div id="app">
   <div id="main">
+    <div id="stagebox">
     <div id="stage">
       <canvas id="gl"></canvas>
       <div id="hud" aria-hidden="true"><div class="top"><span class="name"></span><span class="val"></span></div><div class="track"><div class="bar"></div></div></div>
@@ -96,9 +107,13 @@
         <div id="logos" class="empty"><img id="logoA" alt="" hidden><span class="div" hidden></span><img id="logoB" alt="" hidden></div>
       </div>
     </div>
+    </div>
     <div id="bar">
       <button id="play" aria-label="Pause"></button>
       <input id="scrub" type="range" min="0" max="14" step="0.01" value="0" aria-label="Timeline">
+    </div>
+    <div id="slot" aria-label="Selected control">
+      <span class="name"></span><input id="slotRange" type="range" aria-label="Selected control value"><span class="val"></span>
     </div>
     <div id="transport">
       <button data-aspect="16:9">16:9</button>
@@ -884,22 +899,44 @@ playBtn.onclick = () => setPlaying(!playing);
 let wasPlaying = true, scrubbing = false;
 scrub.oninput = () => { if (!scrubbing) { scrubbing = true; wasPlaying = playing; } playing = false; head = parseFloat(scrub.value); };
 scrub.onchange = () => { scrubbing = false; setPlaying(wasPlaying); };
-/* Formats. The presets fill the available width. "Custom" keeps the picture's
-   height fixed and changes only its width, anywhere from 10:2 to 9:16. */
+/* Two ways to work a dial. Touch: press, hold and drag on the button itself.
+   Mouse (desktop): click a button to select it, then use the slider that always
+   sits in the same slot under the playback bar. */
+const DESK = window.matchMedia("(hover: hover) and (pointer: fine)");
+const applyDesk = () => document.body.classList.toggle("desk", DESK.matches);
+applyDesk();
+const Slot = {
+  cur: null,                                    // { label, min, max, step, get, set, fmt, node }
+  bind(c) {
+    if (this.cur && this.cur.node) this.cur.node.classList.remove("sel");
+    this.cur = c; c.node.classList.add("sel");
+    const r = el("slotRange"); r.min = c.min; r.max = c.max; r.step = c.step;
+    el("slot").querySelector(".name").textContent = c.label; this.refresh();
+  },
+  refresh() { const c = this.cur; if (!c) return; el("slotRange").value = c.get(); el("slot").querySelector(".val").textContent = c.fmt(c.get()); },
+};
+el("slotRange").oninput = ev => { if (Slot.cur) { Slot.cur.set(parseFloat(ev.target.value)); Slot.refresh(); } };
+
+/* Formats. On touch the presets fill the available width. On desktop the picture is
+   fitted inside a fixed-height area, so changing format never moves the controls.
+   "Custom" keeps the picture's height fixed and changes only its width, 10:2 to 9:16. */
 const CUSTOM_MIN = 9 / 16, CUSTOM_MAX = 10 / 2;
 const ratioLabel = r => r >= 1 ? Math.round(r * 9) + ":9" : "9:" + Math.round(9 / r);   // whole numbers only, e.g. 21:9, 16:9, 9:16
 function setAspect(a) {
   P.aspect = a;
-  if (a === "custom") {
-    const r = clamp(P.customRatio, CUSTOM_MIN, CUSTOM_MAX), avail = el("main").clientWidth;
+  const custom = a === "custom", avail = el("main").clientWidth;
+  const r = custom ? clamp(P.customRatio, CUSTOM_MIN, CUSTOM_MAX) : (([w, h]) => w / h)(a.split(":").map(Number));
+  if (DESK.matches) {
+    const boxH = el("stagebox").clientHeight;
+    const h = custom ? Math.min(boxH, avail / CUSTOM_MAX) : boxH;      // custom: one height across its whole range
+    stage.style.width = Math.min(avail, h * r) + "px"; stage.style.maxWidth = "100%";
+  } else if (custom) {
     const fixedH = Math.max(avail / CUSTOM_MAX, Math.min(210, window.innerHeight - 330));   // one height for the whole range where the screen allows
     stage.style.width = Math.min(avail, fixedH * r) + "px"; stage.style.maxWidth = "100%";
-    stage.style.aspectRatio = String(r);
   } else {
-    const [w, h] = a.split(":").map(Number);
-    stage.style.width = ""; stage.style.aspectRatio = w + " / " + h;
-    stage.style.maxWidth = `calc(max(180px, 100vh - 330px) * ${w} / ${h})`;   // never taller than the window
+    stage.style.width = ""; stage.style.maxWidth = `calc(max(180px, 100vh - 330px) * ${r})`;   // never taller than the window
   }
+  stage.style.aspectRatio = String(r);
   document.querySelectorAll("[data-aspect]").forEach(b => b.classList.toggle("on", b.dataset.aspect === a));
   resize();
 }
@@ -909,13 +946,16 @@ document.querySelectorAll("[data-aspect]").forEach(b => { if (b.id !== "custom")
   let held = false, x0 = 0, u0 = 0;
   const show = () => hud("Aspect", ratioLabel(P.customRatio), Math.log(P.customRatio / CUSTOM_MIN) / span);
   const setU = u => { P.customRatio = CUSTOM_MIN * Math.exp(clamp(u) * span); setAspect("custom"); show(); };
-  c.onpointerdown = ev => { held = true; x0 = ev.clientX; u0 = Math.log(clamp(P.customRatio, CUSTOM_MIN, CUSTOM_MAX) / CUSTOM_MIN) / span; try { c.setPointerCapture(ev.pointerId); } catch (e) {} setAspect("custom"); show(); el("hud").classList.add("show"); ev.preventDefault(); };
+  const slotDesc = { label: "Aspect", min: 0, max: 1, step: 0.001, node: c, get: () => Math.log(clamp(P.customRatio, CUSTOM_MIN, CUSTOM_MAX) / CUSTOM_MIN) / span, set: u => { P.customRatio = CUSTOM_MIN * Math.exp(clamp(u) * span); setAspect("custom"); }, fmt: () => ratioLabel(P.customRatio) };
+  c.onclick = () => { if (DESK.matches) { setAspect("custom"); Slot.bind(slotDesc); } };
+  c.onpointerdown = ev => { if (ev.pointerType === "mouse") return; held = true; x0 = ev.clientX; u0 = Math.log(clamp(P.customRatio, CUSTOM_MIN, CUSTOM_MAX) / CUSTOM_MIN) / span; try { c.setPointerCapture(ev.pointerId); } catch (e) {} setAspect("custom"); show(); el("hud").classList.add("show"); ev.preventDefault(); };
   c.onpointermove = ev => { if (held) setU(u0 + (ev.clientX - x0) / Math.min(300, window.innerWidth * 0.7)); };
   const end = () => { held = false; el("hud").classList.remove("show"); };
   c.onpointerup = end; c.onpointercancel = end; c.onlostpointercapture = end;
   c.onkeydown = ev => { const dir = ev.key === "ArrowRight" ? 1 : ev.key === "ArrowLeft" ? -1 : 0; if (dir) { setU(Math.log(P.customRatio / CUSTOM_MIN) / span + dir * 0.02); ev.preventDefault(); } else if (ev.key === "Enter" || ev.key === " ") setAspect("custom"); };
   c.oncontextmenu = ev => ev.preventDefault();
-  window.addEventListener("resize", () => { if (P.aspect === "custom") setAspect("custom"); });
+  window.addEventListener("resize", () => setAspect(P.aspect));
+  DESK.addEventListener("change", () => { applyDesk(); setAspect(P.aspect); });
 }
 window.__seek = v => { setPlaying(false); head = v / SEQ.total * P.loopLength; update(internal()); showClock(); };   // handy from the console
 
@@ -963,6 +1003,7 @@ function setMusic(id) {
 }
 const REBUILD_TEXT = new Set(["showText", "kicker", "line1", "line2", "line3", "title1", "title2", "textColor", "weight", "slantAI"]);
 const refreshers = [];
+let firstDial = null;
 function hud(name, value, frac) { const h = el("hud"); h.querySelector(".name").textContent = name; h.querySelector(".val").textContent = value; h.querySelector(".bar").style.width = (clamp(frac) * 100) + "%"; }
 function refreshControls() { refreshers.forEach(f => f()); }
 {
@@ -1003,10 +1044,13 @@ function refreshControls() { refreshers.forEach(f => f()); }
       } else {                                              // press, hold and drag sideways
         const fill = document.createElement("span"); fill.className = "fill"; d.appendChild(fill);
         const fmt = v => (+v).toFixed(step >= 1 ? 0 : step >= 0.1 ? 1 : 2);
-        const show = () => { val.textContent = fmt(P[key]); fill.style.width = (clamp((P[key] - a) / (b - a)) * 100) + "%"; if (d.classList.contains("active")) hud(label, fmt(P[key]), (P[key] - a) / (b - a)); };
+        const show = () => { val.textContent = fmt(P[key]); fill.style.width = (clamp((P[key] - a) / (b - a)) * 100) + "%"; if (d.classList.contains("active")) hud(label, fmt(P[key]), (P[key] - a) / (b - a)); if (Slot.cur && Slot.cur.node === d) Slot.refresh(); };
         const set = v => { v = clamp(Math.round(v / step) * step, a, b); if (v !== P[key]) { P[key] = v; show(); changed(); } };
         let startX = 0, startV = 0, held = false;
-        d.onpointerdown = ev => { held = true; startX = ev.clientX; startV = P[key]; try { d.setPointerCapture(ev.pointerId); } catch (e) {} d.classList.add("active"); show(); el("hud").classList.add("show"); ev.preventDefault(); };
+        const slotDesc = { label, min: a, max: b, step, node: d, get: () => P[key], set: v => set(v), fmt };
+        d.onclick = () => { if (DESK.matches) Slot.bind(slotDesc); };          // mouse: select, then use the fixed slider
+        if (!firstDial) firstDial = slotDesc;
+        d.onpointerdown = ev => { if (ev.pointerType === "mouse") return; held = true; startX = ev.clientX; startV = P[key]; try { d.setPointerCapture(ev.pointerId); } catch (e) {} d.classList.add("active"); show(); el("hud").classList.add("show"); ev.preventDefault(); };
         d.onpointermove = ev => { if (held) set(startV + (ev.clientX - startX) / Math.min(300, window.innerWidth * 0.7) * (b - a)); };
         const end = () => { if (!held) return; held = false; d.classList.remove("active"); el("hud").classList.remove("show"); };
         d.onpointerup = end; d.onpointercancel = end; d.onlostpointercapture = end;
@@ -1027,7 +1071,7 @@ function refreshControls() { refreshers.forEach(f => f()); }
       panel.prepend(bar);
     }
   });
-  select(0); markMusic(P.music);
+  select(0); markMusic(P.music); if (firstDial) Slot.bind(firstDial);
 }
 // Sound: the default track is cued on load. Browsers hold audio back until the first
 // tap, click or key press, so the first one anywhere on the page releases it.
