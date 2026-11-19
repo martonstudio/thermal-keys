@@ -887,7 +887,7 @@ scrub.onchange = () => { scrubbing = false; setPlaying(wasPlaying); };
 /* Formats. The presets fill the available width. "Custom" keeps the picture's
    height fixed and changes only its width, anywhere from 10:2 to 9:16. */
 const CUSTOM_MIN = 9 / 16, CUSTOM_MAX = 10 / 2;
-const ratioLabel = r => r >= 1 ? r.toFixed(2) + ":1" : "1:" + (1 / r).toFixed(2);
+const ratioLabel = r => r >= 1 ? Math.round(r * 9) + ":9" : "9:" + Math.round(9 / r);   // whole numbers only, e.g. 21:9, 16:9, 9:16
 function setAspect(a) {
   P.aspect = a;
   if (a === "custom") {
@@ -895,12 +895,10 @@ function setAspect(a) {
     const fixedH = Math.max(avail / CUSTOM_MAX, Math.min(210, window.innerHeight - 330));   // one height for the whole range where the screen allows
     stage.style.width = Math.min(avail, fixedH * r) + "px"; stage.style.maxWidth = "100%";
     stage.style.aspectRatio = String(r);
-    el("custom").textContent = "Custom " + ratioLabel(r);
   } else {
     const [w, h] = a.split(":").map(Number);
     stage.style.width = ""; stage.style.aspectRatio = w + " / " + h;
     stage.style.maxWidth = `calc(max(180px, 100vh - 330px) * ${w} / ${h})`;   // never taller than the window
-    el("custom").textContent = "Custom";
   }
   document.querySelectorAll("[data-aspect]").forEach(b => b.classList.toggle("on", b.dataset.aspect === a));
   resize();
