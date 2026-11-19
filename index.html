@@ -10,8 +10,7 @@
   :root { color-scheme: dark; }
   * { box-sizing: border-box; }
   html, body { margin: 0; background: #0a0a12; color: #e8e8f0; font-family: "Outfit", system-ui, sans-serif; }
-  #app { display: grid; grid-template-columns: 1fr; gap: 10px; padding: 10px; max-width: 1500px; margin: 0 auto; }
-  @media (min-width: 900px) { #app { grid-template-columns: minmax(0, 1fr) 360px; align-items: start; } #side { position: sticky; top: 10px; max-height: calc(100vh - 20px); overflow: auto; } }
+  #app { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; padding: 10px; max-width: 1200px; margin: 0 auto; }
 
   /* ---------- stage ---------- */
   #stage { position: relative; width: 100%; margin: 0 auto; aspect-ratio: 16 / 9; overflow: hidden; --u: 1cqw; background: #2b22d6; border-radius: 6px; container-type: inline-size; }
@@ -33,9 +32,10 @@
   /* ---------- transport ---------- */
   #transport { display: flex; align-items: center; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
   #transport button { background: #1b1b2a; color: #fff; border: 1px solid #34344a; border-radius: 6px; padding: 9px 12px; min-height: 38px; font: 600 13px "Outfit", system-ui, sans-serif; cursor: pointer; }
-    #transport button:active, #transport button.on { background: #2b22d6; border-color: #6f7bff; }
+    #custom { touch-action: none; cursor: ew-resize; user-select: none; -webkit-user-select: none; }
+  #transport button:active, #transport button.on { background: #2b22d6; border-color: #6f7bff; }
   #scrub { flex: 1 1 160px; min-width: 120px; accent-color: #ffe01f; }
-  #clock { font: 500 13px ui-monospace, monospace; min-width: 86px; text-align: right; opacity: .8; }
+  #clock { font: 500 12px ui-monospace, monospace; min-width: 0; text-align: right; opacity: .8; }
   /* ---------- side panel ---------- */
   #side { min-width: 0; }
   #tabs { display: flex; gap: 4px; overflow-x: auto; padding: 6px; background: #14141f; border-radius: 8px 8px 0 0; border-bottom: 1px solid #26263a; scrollbar-width: none; }
@@ -46,13 +46,26 @@
   #tracks { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; padding: 8px 0 4px; }
   #tracks button { padding: 11px 2px; border: 1px solid #34344a; border-radius: 6px; background: #1b1b2a; color: #fff; font: 600 12px "Outfit", system-ui, sans-serif; cursor: pointer; }
   #tracks button.on { background: #2b22d6; border-color: #6f7bff; }
-  .row { display: grid; grid-template-columns: 36% 1fr 46px; align-items: center; gap: 8px; min-height: 40px; font-size: 13px; }
-  .row label { opacity: .85; }
-  .row input[type=range] { width: 100%; min-width: 0; height: 28px; accent-color: #ffe01f; }
-  .row output { font: 12px ui-monospace, monospace; text-align: right; opacity: .65; }
-  .row input[type=text] { grid-column: 2 / 4; min-width: 0; background: #0a0a12; color: #fff; border: 1px solid #34344a; border-radius: 6px; padding: 8px; font: 500 13px "Outfit", system-ui, sans-serif; }
-  .row input[type=color] { grid-column: 2 / 4; width: 100%; height: 30px; padding: 0; border: 1px solid #34344a; border-radius: 6px; background: none; }
-  .row input[type=checkbox] { width: 22px; height: 22px; accent-color: #ffe01f; }
+  /* Snapseed-style dials: a grid of parameter buttons, three rows deep. Press and
+     hold one and drag sideways to change it; a read-out appears over the picture. */
+  .dials { display: grid; grid-template-rows: repeat(3, 52px); grid-auto-flow: column; grid-auto-columns: minmax(80px, 1fr); gap: 6px; overflow-x: auto; padding: 8px 0 4px; scrollbar-width: thin; }
+  .dial { position: relative; overflow: hidden; display: flex; flex-direction: column; justify-content: center; gap: 2px; padding: 0 8px; text-align: left; border: 1px solid #34344a; border-radius: 8px; background: #1b1b2a; color: #fff; font: 600 12px "Outfit", system-ui, sans-serif; cursor: ew-resize; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+  .dial .v { font: 11px ui-monospace, monospace; opacity: .6; }
+  .dial .fill { position: absolute; left: 0; bottom: 0; height: 3px; background: #ffe01f; }
+  .dial.active { border-color: #ffe01f; background: #23233a; }
+  .dial.toggle, .dial.swatch { cursor: pointer; touch-action: manipulation; }
+  .dial.toggle.on { background: #2b22d6; border-color: #6f7bff; }
+  .dial.swatch input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+  .dial.swatch .chip { position: absolute; right: 8px; top: 50%; width: 18px; height: 18px; margin-top: -9px; border-radius: 50%; border: 1px solid #fff8; }
+  .fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 6px; padding-top: 8px; }
+  .fields label { display: block; font-size: 11px; opacity: .65; margin-bottom: 2px; }
+  .fields input { width: 100%; min-width: 0; background: #0a0a12; color: #fff; border: 1px solid #34344a; border-radius: 6px; padding: 8px; font: 500 13px "Outfit", system-ui, sans-serif; }
+  #hud { position: absolute; left: 50%; top: 5%; transform: translateX(-50%); width: min(72%, 320px); padding: 8px 12px 10px; border-radius: 10px; background: rgba(10,10,18,.72); color: #fff; font: 600 13px "Outfit", system-ui, sans-serif; text-transform: none; pointer-events: none; opacity: 0; transition: opacity .12s; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+  #hud.show { opacity: 1; }
+  #hud .top { display: flex; justify-content: space-between; margin-bottom: 6px; }
+  #hud .val { font: 12px ui-monospace, monospace; }
+  #hud .track { height: 4px; border-radius: 2px; background: #ffffff33; }
+  #hud .bar { height: 100%; border-radius: 2px; background: #ffe01f; }
   #extras { padding-top: 8px; font-size: 13px; }
   #extras label { display: block; margin: 6px 0 3px; opacity: .8; }
   #extras input[type=file] { width: 100%; font-size: 12px; color: #aaa; }
@@ -65,6 +78,7 @@
   <div id="main">
     <div id="stage">
       <canvas id="gl"></canvas>
+      <div id="hud" aria-hidden="true"><div class="top"><span class="name"></span><span class="val"></span></div><div class="track"><div class="bar"></div></div></div>
       <div id="overlay">
         <div id="lockup"></div>
         <div id="headline"><div id="kicker"></div><div id="lines"></div></div>
@@ -77,11 +91,10 @@
       <button id="sound">Tap for sound</button>
       <input id="scrub" type="range" min="0" max="14" step="0.01" value="0" aria-label="Timeline">
       <span id="clock">0.00 / 14.00</span>
-      <button id="full">Fullscreen</button>
-      <span style="flex-basis:100%;height:0"></span>
       <button data-aspect="16:9">16:9</button>
       <button data-aspect="9:16">9:16</button>
       <button data-aspect="4:5">4:5</button>
+      <button data-aspect="custom" id="custom" title="Hold and drag to set the width">Custom</button>
     </div>
   </div>
   <div id="side">
@@ -109,7 +122,7 @@
 
 const DEFAULTS = {
   // playback + format
-  speed: 1, loopLength: 14, shots: 4, aspect: "16:9", music: "ambient", volume: 0.7,
+  speed: 1, loopLength: 14, shots: 4, aspect: "16:9", customRatio: 16 / 9, music: "ambient", volume: 0.7,
   // colour: one hue slider turns the whole ramp; the ramp itself (cold -> hot) lives here
   hue: 0,
   c0: "#7fa9b3", c1: "#2a22d8", c2: "#7d98ff", c3: "#e8f0ff", c4: "#ffe01f", c5: "#ff8d1c", c6: "#e23a1c",
@@ -505,7 +518,8 @@ function widest(node) {
 function fitText() {
   const W = stage.clientWidth, H = stage.clientHeight; if (!W || !H) return;
   const narrow = Math.max(1, (16 / 9) / (W / H));           // 1 at 16:9, 3.16 at 9:16
-  stage.style.setProperty("--u", (W / 100 * Math.pow(narrow, 0.7)) + "px");
+  const wide = Math.min(1, (16 / 9) / (W / H));              // frames wider than 16:9 size type by height instead
+  stage.style.setProperty("--u", (W / 100 * wide * Math.pow(narrow, 0.7)) + "px");
   fit.tall = clamp((narrow - 1) / 2.16);
   fit.head = 0.84 * W / widest(el("headline"));
   fit.lock = 0.42 * W / widest(el("lockup"));
@@ -856,15 +870,41 @@ function tick(now) {
 function setPlaying(v) { playing = v; playBtn.textContent = v ? "Pause" : "Play"; }
 playBtn.onclick = () => setPlaying(!playing);
 scrub.oninput = () => { setPlaying(false); head = parseFloat(scrub.value); };
-el("full").onclick = () => { try { (document.fullscreenElement ? document.exitFullscreen() : stage.requestFullscreen()).catch(() => {}); } catch (e) {} };
+/* Formats. The presets fill the available width. "Custom" keeps the picture's
+   height fixed and changes only its width, anywhere from 10:2 to 9:16. */
+const CUSTOM_MIN = 9 / 16, CUSTOM_MAX = 10 / 2;
+const ratioLabel = r => r >= 1 ? r.toFixed(2) + ":1" : "1:" + (1 / r).toFixed(2);
 function setAspect(a) {
-  P.aspect = a; const [w, h] = a.split(":").map(Number);
-  stage.style.aspectRatio = w + " / " + h;
-  stage.style.maxWidth = `calc((100vh - 150px) * ${w} / ${h})`;   // never taller than the window
+  P.aspect = a;
+  if (a === "custom") {
+    const r = clamp(P.customRatio, CUSTOM_MIN, CUSTOM_MAX), avail = el("main").clientWidth;
+    const fixedH = Math.max(avail / CUSTOM_MAX, Math.min(210, window.innerHeight - 330));   // one height for the whole range where the screen allows
+    stage.style.width = Math.min(avail, fixedH * r) + "px"; stage.style.maxWidth = "100%";
+    stage.style.aspectRatio = String(r);
+    el("custom").textContent = "Custom " + ratioLabel(r);
+  } else {
+    const [w, h] = a.split(":").map(Number);
+    stage.style.width = ""; stage.style.aspectRatio = w + " / " + h;
+    stage.style.maxWidth = `calc(max(180px, 100vh - 330px) * ${w} / ${h})`;   // never taller than the window
+    el("custom").textContent = "Custom";
+  }
   document.querySelectorAll("[data-aspect]").forEach(b => b.classList.toggle("on", b.dataset.aspect === a));
   resize();
 }
-document.querySelectorAll("[data-aspect]").forEach(b => b.onclick = () => setAspect(b.dataset.aspect));
+document.querySelectorAll("[data-aspect]").forEach(b => { if (b.id !== "custom") b.onclick = () => setAspect(b.dataset.aspect); });
+{ // the Custom button is a dial: press, hold and drag sideways (log scale, so it feels even)
+  const c = el("custom"), span = Math.log(CUSTOM_MAX / CUSTOM_MIN);
+  let held = false, x0 = 0, u0 = 0;
+  const show = () => hud("Aspect", ratioLabel(P.customRatio), Math.log(P.customRatio / CUSTOM_MIN) / span);
+  const setU = u => { P.customRatio = CUSTOM_MIN * Math.exp(clamp(u) * span); setAspect("custom"); show(); };
+  c.onpointerdown = ev => { held = true; x0 = ev.clientX; u0 = Math.log(clamp(P.customRatio, CUSTOM_MIN, CUSTOM_MAX) / CUSTOM_MIN) / span; try { c.setPointerCapture(ev.pointerId); } catch (e) {} setAspect("custom"); show(); el("hud").classList.add("show"); ev.preventDefault(); };
+  c.onpointermove = ev => { if (held) setU(u0 + (ev.clientX - x0) / Math.min(300, window.innerWidth * 0.7)); };
+  const end = () => { held = false; el("hud").classList.remove("show"); };
+  c.onpointerup = end; c.onpointercancel = end; c.onlostpointercapture = end;
+  c.onkeydown = ev => { const dir = ev.key === "ArrowRight" ? 1 : ev.key === "ArrowLeft" ? -1 : 0; if (dir) { setU(Math.log(P.customRatio / CUSTOM_MIN) / span + dir * 0.02); ev.preventDefault(); } else if (ev.key === "Enter" || ev.key === " ") setAspect("custom"); };
+  c.oncontextmenu = ev => ev.preventDefault();
+  window.addEventListener("resize", () => { if (P.aspect === "custom") setAspect("custom"); });
+}
 window.__seek = v => { setPlaying(false); head = v / SEQ.total * P.loopLength; update(internal()); showClock(); };   // handy from the console
 
 function resize() {
@@ -879,7 +919,7 @@ new ResizeObserver(resize).observe(stage);
 /* ---- control tabs: [setting, label, min, max, step] or [setting, label, "text" | "bool" | "color"] ---- */
 const TABS = [
   { name: "Main", items: [
-    ["loopLength", "Loop length (s)", 3, 40, 0.5], ["shots", "Shots", 1, 10, 1], ["speed", "Speed", 0, 3, 0.01], ["hue", "Hue", -180, 180, 1],
+    ["loopLength", "Loop (s)", 3, 40, 0.5], ["shots", "Shots", 1, 10, 1], ["speed", "Speed", 0, 3, 0.01], ["hue", "Hue", -180, 180, 1],
     ["bgHeat", "Heat", -0.5, 0.5, 0.01], ["keyTopHeat", "Hot tops", -1, 1.5, 0.01], ["bgContrast", "Contrast", 0.2, 2, 0.01], ["bgWarp", "Warp", 0, 1.5, 0.01],
     ["bgFlow", "Flow speed", 1, 4, 1], ["blur", "Blur", 0, 5, 0.01], ["floatDrift", "Float drift", 0, 4, 0.01], ["burstShare", "Keys that lift", 0, 1, 0.01],
     ["burstHeight", "Burst height", 0, 6, 0.01], ["tumble", "Tumble", 0, 3, 0.01], ["keyOpacity", "Glass opacity", 0.2, 1, 0.01], ["edgeStrength", "Edge lines", 0, 1.5, 0.01] ] },
@@ -908,6 +948,7 @@ function setMusic(id) {
 }
 const REBUILD_TEXT = new Set(["showText", "kicker", "line1", "line2", "line3", "title1", "title2", "textColor", "weight", "slantAI"]);
 const refreshers = [];
+function hud(name, value, frac) { const h = el("hud"); h.querySelector(".name").textContent = name; h.querySelector(".val").textContent = value; h.querySelector(".bar").style.width = (clamp(frac) * 100) + "%"; }
 function refreshControls() { refreshers.forEach(f => f()); }
 {
   const tabBar = el("tabs"), panels = el("panels");
@@ -915,27 +956,49 @@ function refreshControls() { refreshers.forEach(f => f()); }
   TABS.forEach((tab, ti) => {
     const btn = document.createElement("button"); btn.textContent = tab.name; btn.setAttribute("role", "tab"); btn.onclick = () => select(ti); tabBar.appendChild(btn);
     const panel = document.createElement("div"); panel.className = "panel"; panel.setAttribute("role", "tabpanel"); panels.appendChild(panel);
+    const fields = document.createElement("div"); fields.className = "fields";
+    const grid = document.createElement("div"); grid.className = "dials";
     tab.items.forEach(([key, label, a, b, step]) => {
-      const row = document.createElement("div"); row.className = "row";
-      const id = "ctl-" + ti + "-" + key, lab = document.createElement("label"); lab.textContent = label; lab.htmlFor = id; row.appendChild(lab);
-      const input = document.createElement("input"); input.id = id; row.appendChild(input);
-      const changed = () => { if (REBUILD_TEXT.has(key)) buildText(); if (key === "shots") { setShots(); refreshControls(); } refreshers.forEach(f => { if (f.key === key && f !== mine) f(); }); };
       let mine = null;
-      if (typeof a === "number") {
-        input.type = "range"; input.min = a; input.max = b; input.step = step;
-        const out = document.createElement("output"); row.appendChild(out);
-        const show = () => { input.value = P[key]; out.textContent = (+P[key]).toFixed(step >= 1 ? 0 : step >= 0.1 ? 1 : 2); };
-        input.oninput = () => { P[key] = parseFloat(input.value); out.textContent = (+P[key]).toFixed(step >= 1 ? 0 : step >= 0.1 ? 1 : 2); changed(); };
-        show.key = key; mine = show; refreshers.push(show); show();
-      } else if (a === "bool") {
-        input.type = "checkbox"; input.onchange = () => { P[key] = input.checked; changed(); };
-        const show = () => { input.checked = P[key]; }; show.key = key; mine = show; refreshers.push(show); show();
-      } else {
-        input.type = a; input.oninput = () => { P[key] = input.value; changed(); };
-        const show = () => { input.value = P[key]; }; show.key = key; mine = show; refreshers.push(show); show();
+      const changed = () => { if (REBUILD_TEXT.has(key)) buildText(); if (key === "shots") { setShots(); refreshControls(); } refreshers.forEach(f => { if (f.key === key && f !== mine) f(); }); };
+      const register = show => { show.key = key; mine = show; refreshers.push(show); show(); };
+      if (a === "text") {                                   // text stays a plain field
+        const wrap = document.createElement("div"), lab = document.createElement("label"), input = document.createElement("input");
+        input.type = "text"; input.id = "ctl-" + ti + "-" + key; lab.htmlFor = input.id; lab.textContent = label;
+        input.oninput = () => { P[key] = input.value; changed(); };
+        wrap.append(lab, input); fields.appendChild(wrap); register(() => { input.value = P[key]; });
+        return;
       }
-      panel.appendChild(row);
+      const d = document.createElement("button"); d.type = "button"; d.className = "dial"; d.id = "ctl-" + ti + "-" + key;
+      const name = document.createElement("span"); name.textContent = label; d.appendChild(name);
+      const val = document.createElement("span"); val.className = "v"; d.appendChild(val);
+      grid.appendChild(d);
+      if (a === "bool") {                                   // tap to switch
+        d.classList.add("toggle"); d.onclick = () => { P[key] = !P[key]; show(); changed(); };
+        const show = () => { val.textContent = P[key] ? "On" : "Off"; d.classList.toggle("on", !!P[key]); }; register(show);
+      } else if (a === "color") {                           // tap to pick
+        d.classList.add("swatch");
+        const chip = document.createElement("span"); chip.className = "chip"; const input = document.createElement("input"); input.type = "color"; input.setAttribute("aria-label", label);
+        d.append(chip, input); input.oninput = () => { P[key] = input.value; show(); changed(); };
+        const show = () => { input.value = P[key]; val.textContent = P[key]; chip.style.background = P[key]; }; register(show);
+      } else {                                              // press, hold and drag sideways
+        const fill = document.createElement("span"); fill.className = "fill"; d.appendChild(fill);
+        const fmt = v => (+v).toFixed(step >= 1 ? 0 : step >= 0.1 ? 1 : 2);
+        const show = () => { val.textContent = fmt(P[key]); fill.style.width = (clamp((P[key] - a) / (b - a)) * 100) + "%"; if (d.classList.contains("active")) hud(label, fmt(P[key]), (P[key] - a) / (b - a)); };
+        const set = v => { v = clamp(Math.round(v / step) * step, a, b); if (v !== P[key]) { P[key] = v; show(); changed(); } };
+        let startX = 0, startV = 0, held = false;
+        d.onpointerdown = ev => { held = true; startX = ev.clientX; startV = P[key]; try { d.setPointerCapture(ev.pointerId); } catch (e) {} d.classList.add("active"); show(); el("hud").classList.add("show"); ev.preventDefault(); };
+        d.onpointermove = ev => { if (held) set(startV + (ev.clientX - startX) / Math.min(300, window.innerWidth * 0.7) * (b - a)); };
+        const end = () => { if (!held) return; held = false; d.classList.remove("active"); el("hud").classList.remove("show"); };
+        d.onpointerup = end; d.onpointercancel = end; d.onlostpointercapture = end;
+        d.ondblclick = () => set(DEFAULTS[key]);            // double-tap returns to the default
+        d.onkeydown = ev => { const dir = ev.key === "ArrowRight" || ev.key === "ArrowUp" ? 1 : ev.key === "ArrowLeft" || ev.key === "ArrowDown" ? -1 : 0; if (dir) { set(P[key] + dir * step * (ev.shiftKey ? 10 : 1)); ev.preventDefault(); } };
+        d.oncontextmenu = ev => ev.preventDefault();
+        register(show);
+      }
     });
+    if (fields.children.length) panel.appendChild(fields);
+    if (grid.children.length) panel.appendChild(grid);
     if (tab.name === "Logos") panel.appendChild(el("extras"));
     if (tab.name === "Music") {
       const bar = document.createElement("div"); bar.id = "tracks";
