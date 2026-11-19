@@ -1,0 +1,987 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Thermal Keys – WebGL recreation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: #0a0a12; color: #e8e8f0; font-family: "Outfit", system-ui, sans-serif; }
+  #app { display: grid; grid-template-columns: 1fr; gap: 10px; padding: 10px; max-width: 1500px; margin: 0 auto; }
+  @media (min-width: 900px) { #app { grid-template-columns: minmax(0, 1fr) 360px; align-items: start; } #side { position: sticky; top: 10px; max-height: calc(100vh - 20px); overflow: auto; } }
+
+  /* ---------- stage ---------- */
+  #stage { position: relative; width: 100%; margin: 0 auto; aspect-ratio: 16 / 9; overflow: hidden; --u: 1cqw; background: #2b22d6; border-radius: 6px; container-type: inline-size; }
+  #gl { position: absolute; inset: 0; width: 100%; height: 100%; display: block; will-change: filter, transform; }
+  #overlay { position: absolute; inset: 0; pointer-events: none; color: #fff; font-weight: 700; text-transform: uppercase; line-height: 1; }
+  #overlay .ch { display: inline-block; white-space: pre; will-change: transform, opacity; }
+  #overlay .wd { display: inline-block; white-space: pre; }
+  #overlay .wd.slant { transform: skewX(-13deg); transform-origin: 50% 100%; }
+  #lockup { position: absolute; right: 7.6%; top: 8.2%; white-space: nowrap; font-size: calc(var(--u) * 2.55); line-height: .92; text-align: left; letter-spacing: -.01em; }
+  #headline { position: absolute; left: 8.6%; top: 25.5%; }
+  #kicker { font-size: calc(var(--u) * 1.45); letter-spacing: .04em; margin: 0 0 calc(var(--u) * .75) calc(var(--u) * .35); }
+  #headline .line { font-size: calc(var(--u) * 3.15); line-height: 1.17; letter-spacing: .012em; white-space: nowrap; }
+  #bigtitle { position: absolute; left: 0; right: 0; top: 30%; display: flex; flex-direction: column; align-items: center; white-space: nowrap; font-size: calc(var(--u) * 8.2); line-height: .9; letter-spacing: -.012em; }
+  #logos { position: absolute; left: 50%; display: flex; align-items: center; gap: calc(var(--u) * 1.3); transform: translate(-50%, -50%); height: calc(var(--u) * 6); }
+  #logos img { height: 100%; width: auto; display: block; }
+  #logos .div { width: 1px; align-self: stretch; background: rgba(255,255,255,.85); }
+  #logos.empty { display: none; }
+
+  /* ---------- transport ---------- */
+  #transport { display: flex; align-items: center; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+  #transport button { background: #1b1b2a; color: #fff; border: 1px solid #34344a; border-radius: 6px; padding: 9px 12px; min-height: 38px; font: 600 13px "Outfit", system-ui, sans-serif; cursor: pointer; }
+    #transport button:active, #transport button.on { background: #2b22d6; border-color: #6f7bff; }
+  #scrub { flex: 1 1 160px; min-width: 120px; accent-color: #ffe01f; }
+  #clock { font: 500 13px ui-monospace, monospace; min-width: 86px; text-align: right; opacity: .8; }
+  /* ---------- side panel ---------- */
+  #side { min-width: 0; }
+  #tabs { display: flex; gap: 4px; overflow-x: auto; padding: 6px; background: #14141f; border-radius: 8px 8px 0 0; border-bottom: 1px solid #26263a; scrollbar-width: none; }
+  #tabs button { flex: 1 0 auto; padding: 10px 12px; border: 0; border-radius: 6px; background: transparent; color: #a9a9c2; font: 600 13px "Outfit", system-ui, sans-serif; cursor: pointer; }
+  #tabs button[aria-selected="true"] { background: #2b22d6; color: #fff; }
+  .panel { background: #14141f; padding: 6px 12px 12px; border-radius: 0 0 8px 8px; }
+  .panel[hidden] { display: none; }
+  #tracks { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; padding: 8px 0 4px; }
+  #tracks button { padding: 11px 2px; border: 1px solid #34344a; border-radius: 6px; background: #1b1b2a; color: #fff; font: 600 12px "Outfit", system-ui, sans-serif; cursor: pointer; }
+  #tracks button.on { background: #2b22d6; border-color: #6f7bff; }
+  .row { display: grid; grid-template-columns: 36% 1fr 46px; align-items: center; gap: 8px; min-height: 40px; font-size: 13px; }
+  .row label { opacity: .85; }
+  .row input[type=range] { width: 100%; min-width: 0; height: 28px; accent-color: #ffe01f; }
+  .row output { font: 12px ui-monospace, monospace; text-align: right; opacity: .65; }
+  .row input[type=text] { grid-column: 2 / 4; min-width: 0; background: #0a0a12; color: #fff; border: 1px solid #34344a; border-radius: 6px; padding: 8px; font: 500 13px "Outfit", system-ui, sans-serif; }
+  .row input[type=color] { grid-column: 2 / 4; width: 100%; height: 30px; padding: 0; border: 1px solid #34344a; border-radius: 6px; background: none; }
+  .row input[type=checkbox] { width: 22px; height: 22px; accent-color: #ffe01f; }
+  #extras { padding-top: 8px; font-size: 13px; }
+  #extras label { display: block; margin: 6px 0 3px; opacity: .8; }
+  #extras input[type=file] { width: 100%; font-size: 12px; color: #aaa; }
+  #extras button { background: #1b1b2a; color: #fff; border: 1px solid #34344a; border-radius: 6px; padding: 7px 10px; font: 600 12px "Outfit", system-ui, sans-serif; cursor: pointer; margin: 8px 6px 0 0; }
+  #dump { width: 100%; height: 90px; margin-top: 8px; background: #0a0a12; color: #9fd; border: 1px solid #26263a; font: 11px ui-monospace, monospace; display: none; }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="main">
+    <div id="stage">
+      <canvas id="gl"></canvas>
+      <div id="overlay">
+        <div id="lockup"></div>
+        <div id="headline"><div id="kicker"></div><div id="lines"></div></div>
+        <div id="bigtitle"></div>
+        <div id="logos" class="empty"><img id="logoA" alt="" hidden><span class="div" hidden></span><img id="logoB" alt="" hidden></div>
+      </div>
+    </div>
+    <div id="transport">
+      <button id="play">Pause</button>
+      <button id="sound">Tap for sound</button>
+      <input id="scrub" type="range" min="0" max="14" step="0.01" value="0" aria-label="Timeline">
+      <span id="clock">0.00 / 14.00</span>
+      <button id="full">Fullscreen</button>
+      <span style="flex-basis:100%;height:0"></span>
+      <button data-aspect="16:9">16:9</button>
+      <button data-aspect="9:16">9:16</button>
+      <button data-aspect="4:5">4:5</button>
+    </div>
+  </div>
+  <div id="side">
+    <div id="tabs" role="tablist"></div>
+    <div id="panels"></div>
+    <div id="extras">
+      <label for="fileA">Left logo</label><input id="fileA" type="file" accept="image/*">
+      <label for="fileB">Right logo</label><input id="fileB" type="file" accept="image/*">
+      <div>
+        <button id="clearLogos">Clear logos</button>
+        <button id="copy">Copy settings</button>
+        <button id="reset">Reset all</button>
+      </div>
+      <textarea id="dump" readonly></textarea>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+"use strict";
+/* =====================================================================
+   1. SETTINGS  – every value here is live-editable from the panel
+   ===================================================================== */
+
+const DEFAULTS = {
+  // playback + format
+  speed: 1, loopLength: 14, shots: 4, aspect: "16:9", music: "ambient", volume: 0.7,
+  // colour: one hue slider turns the whole ramp; the ramp itself (cold -> hot) lives here
+  hue: 0,
+  c0: "#7fa9b3", c1: "#2a22d8", c2: "#7d98ff", c3: "#e8f0ff", c4: "#ffe01f", c5: "#ff8d1c", c6: "#e23a1c",
+  // backdrop
+  bgScale: 0.7, bgContrast: 0.72, bgHeat: 0.0, heatAnim: 1.0, bgFlow: 1, bgWarp: 0.4,
+  // keycaps
+  keyOpacity: 0.95, keyPattern: 0.3, keyNormal: 0.3, keyContrast: 0.6, keyHeat: 0.1, keyTopHeat: 0.9,
+  edgeStrength: 0.9, rimStrength: 0.7, edgeColor: "#f3ecff", legendOpacity: 0.95,
+  // motion
+  burstHeight: 2.6, burstShare: 0.42, tumble: 1.0, floatDrift: 1.0, floatScale: 1.0, blur: 2.2, fov: 34,
+  // type
+  kicker: "Human creativity meets A.I.",
+  line1: "The world's first", line2: "AI creative", line3: "championship",
+  title1: "AI creative", title2: "challenge",
+  textColor: "#ffffff", textScale: 1.0, weight: 800, slantAI: true, typeSpeed: 1.0, showText: true,
+};
+const P = Object.assign({}, DEFAULTS);
+
+/* Floating-key layouts. at = position on screen (-1..1 across, -1..1 up), so a
+   layout follows any aspect ratio. rot is Euler radians. */
+const FLOAT_SETS = [
+  [ { legend: "A",     w: 1,    at: [-0.89,  0.65], scale: 1.6,  rot: [1.0,   0.3,   0.10], delay: 0.45 },
+    { legend: "I",     w: 1,    at: [-0.51,  0.56], scale: 1.35, rot: [1.05, -0.35, -0.22], delay: 0.30 },
+    { legend: "",      w: 1,    at: [-0.01,  0.26], scale: 0.85, rot: [0.9,  -0.6,   0.25], delay: 0.55 },
+    { legend: "G",     w: 1,    at: [ 0.17, -0.11], scale: 1.25, rot: [0.9,   0.25, -0.12], delay: 0.20 },
+    { legend: "✦",w: 1.25, at: [-0.63, -0.28], scale: 1.5,  rot: [0.5,  -0.55,  0.05], delay: 0.00 },
+    { legend: "Enter", w: 2.25, at: [ 0.68, -0.39], scale: 2.0,  rot: [1.2,  -0.25,  0.28], delay: 0.85 } ],
+  [ { legend: "Shift", w: 2.25, at: [-0.60, -0.50], scale: 1.75, rot: [1.15,  0.35, -0.25], delay: 0.00 },
+    { legend: "Q",     w: 1,    at: [ 0.80,  0.58], scale: 1.6,  rot: [0.95, -0.40,  0.15], delay: 0.35 },
+    { legend: "W",     w: 1,    at: [ 0.42,  0.16], scale: 1.15, rot: [1.1,   0.30, -0.10], delay: 0.20 },
+    { legend: "",      w: 1,    at: [ 0.08, -0.55], scale: 0.8,  rot: [0.8,  -0.50,  0.30], delay: 0.50 },
+    { legend: "E",     w: 1,    at: [ 0.16,  0.70], scale: 0.95, rot: [1.0,   0.55,  0.20], delay: 0.60 },
+    { legend: "R",     w: 1,    at: [ 0.74, -0.38], scale: 1.4,  rot: [0.7,  -0.30, -0.18], delay: 0.75 } ],
+  [ { legend: "✦",w: 1.25, at: [-0.74,  0.52], scale: 1.9,  rot: [0.9,   0.45,  0.12], delay: 0.00 },
+    { legend: "Enter", w: 2.25, at: [ 0.66, -0.60], scale: 1.7,  rot: [1.15, -0.30,  0.22], delay: 0.30 },
+    { legend: "A",     w: 1,    at: [ 0.80,  0.56], scale: 1.35, rot: [1.0,  -0.45, -0.15], delay: 0.45 },
+    { legend: "I",     w: 1,    at: [-0.78, -0.52], scale: 1.45, rot: [0.75,  0.35, -0.20], delay: 0.15 },
+    { legend: "",      w: 1,    at: [ 0.02, -0.82], scale: 0.9,  rot: [0.9,  -0.60,  0.30], delay: 0.60 } ],
+];
+
+/* Shot library. Each shot is a recipe; the sequence is assembled automatically.
+   len   = authored seconds
+   text  = "headline" (kicker + three lines) or "title" (big centred title)
+   cam   = camera move from -> to. Either polar round the keyboard
+           { az: degrees (0 = dead front), r: distance, h: height, look: aim point }
+           or plain { p: position, q: aim point }. ease > 1 = quick start, slow finish.
+           A move only ever travels one way, so it can never double back.
+   burst = [from, to] how far the keys have lifted (0 seated, 1 fully burst)
+   ripple= a wave of lifting keys sweeps the board
+   blur  = [from, to] soft-focus amount (fraction of the Blur dial)
+   float = which floating-key layout to show instead of the keyboard
+   heat  = [[seconds, backdrop heat], ...] */
+const BURST_CAM = { az: -17, r: 5.46, h: 1.7, look: [1.2, 0.76, 0.03] };
+const SHOTS = {
+  burst:   { len: 3.0, text: "headline", burst: [0.34, 1], heat: [[0, -.1], [3, -.1]],
+             cam: { from: BURST_CAM, to: { az: -13, r: 5.0, h: 1.3, look: [1.3, 0.7, 0] } } },
+  float:   { len: 6.2, text: "headline", float: 0, heat: [[0, .34], [.6, -.1], [2.6, -.1], [3.4, .12], [4.6, .3], [5.8, .34], [6.2, .3]] },
+  macro:   { len: 3.0, text: "headline", burst: [0, 0.22], heat: [[0, .02], [3, .26]],
+             cam: { from: { p: [-6.6, 0.85, 1.9], q: [-3.4, 0.45, 0] }, to: { p: [-2.4, 0.95, 1.5], q: [0.8, 0.45, -0.3] } } },
+  float2:  { len: 4.0, text: "headline", float: 1, heat: [[0, .3], [.6, -.02], [4, .22]] },
+  side:    { len: 3.0, text: "headline", burst: [0.1, 0.62], heat: [[0, -.1], [3, .12]],
+             cam: { from: { az: 82, r: 9.6, h: 1.8, look: [0, 0.8, 0] }, to: { az: 60, r: 7.4, h: 1.3, look: [0, 0.8, 0] } } },
+  top:     { len: 2.2, text: "title", burst: [0, 0], blur: [1, 0.35], fadeIn: [0.75, 1.3], heat: [[0, .2], [2.2, .24]],
+             cam: { from: { p: [-0.6, 10.5, 2.2], q: [-0.6, 0, 0] }, to: { p: [0.5, 5.2, 1.4], q: [0.5, 0, -0.2] } } },
+  ripple:  { len: 3.0, text: "title", burst: [0, 0], ripple: 1, heat: [[0, .08], [3, .3]],
+             cam: { from: { az: 40, r: 10.2, h: 6.6, look: [0, 1.6, 0] }, to: { az: 22, r: 8.8, h: 5.4, look: [0, 1.6, 0] } } },
+  float3:  { len: 3.5, text: "title", float: 2, heat: [[0, .3], [.6, .04], [3.5, .26]] },
+  flyover: { len: 3.0, text: "title", burst: [0, 0.3], heat: [[0, 0], [3, .22]],
+             cam: { from: { p: [0, 2.6, 8.4], q: [0, 0.9, 1.4] }, to: { p: [0, 1.6, 2.6], q: [0, 1.2, -4.5] } } },
+  orbit:   { len: 2.5, text: "title", burst: [0, 0.34], heat: [[0, .24], [1.2, -.02], [2.5, -.1]],
+             cam: { from: { az: -64, r: 10.2, h: 6.6, look: [0.2, 1.5, 0.2] }, to: BURST_CAM, ease: 2.2 } },
+};
+/* Which shots play for a given count. Headline shots lead, title shots follow, and
+   the orbit always closes the loop because it glides straight back into the burst. */
+const HEADLINE_ORDER = ["burst", "float", "macro", "float2", "side"];
+const TITLE_ORDER = ["orbit", "top", "ripple", "float3", "flyover"];
+function buildSequence(n) {
+  n = clamp(Math.round(n), 1, 10);
+  const nH = Math.ceil(n / 2), tail = TITLE_ORDER.slice(0, n - nH);
+  const names = HEADLINE_ORDER.slice(0, nH).concat(tail.slice(1), tail.slice(0, 1));
+  let at = 0, titleAt = Infinity;
+  const shots = names.map(name => { const def = SHOTS[name], sh = { name, def, start: at }; if (def.text === "title" && titleAt === Infinity) titleAt = at; at += def.len; return sh; });
+  return { n, shots, total: at, titleAt };
+}
+let SEQ = null;                             // the assembled sequence, built once the helpers below exist
+
+/* Keyboard rows: [legend, width in key units]. "" with a width is a gap. */
+const ROWS = [
+  { z: -3.2, keys: [["Esc",1],["_",1],["F1",1],["F2",1],["F3",1],["F4",1],["_",.5],["F5",1],["F6",1],["F7",1],["F8",1],["_",.5],["F9",1],["F10",1],["F11",1],["F12",1]] },
+  { z: -2, keys: [["`",1],["1",1],["2",1],["3",1],["4",1],["5",1],["6",1],["7",1],["8",1],["9",1],["0",1],["-",1],["=",1],["Back",2]] },
+  { z: -1, keys: [["Tab",1.5],["Q",1],["W",1],["E",1],["R",1],["T",1],["Y",1],["U",1],["I",1],["O",1],["P",1],["[",1],["]",1],["\\",1.5]] },
+  { z: 0,  keys: [["Caps Lock",1.75],["A",1],["S",1],["D",1],["F",1],["G",1],["H",1],["J",1],["K",1],["L",1],[";",1],["'",1],["Enter",2.25]] },
+  { z: 1,  keys: [["Shift",2.25],["Z",1],["X",1],["C",1],["V",1],["B",1],["N",1],["M",1],[",",1],[".",1],["/",1],["Shift",2.75]] },
+  { z: 2,  keys: [["Ctrl",1.25],["Fn",1.25],["Alt",1.25],["",6.25],["Alt",1.25],["Fn",1.25],["Menu",1.25],["Ctrl",1.25]] },
+];
+
+/* =====================================================================
+   2. SMALL HELPERS
+   ===================================================================== */
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const lerp = (a, b, t) => a + (b - a) * t;
+const smooth = t => { t = clamp(t); return t * t * (3 - 2 * t); };
+const ramp = (t, a, b) => smooth((t - a) / (b - a));           // 0 -> 1 between a and b
+const easeOut = t => 1 - Math.pow(1 - clamp(t), 3);
+const easeIn = t => Math.pow(clamp(t), 2.2);
+function rng(seed) { return () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function keyed(keys, t) { // piecewise-smooth lookup in [[time,value],...]
+  for (let i = 0; i < keys.length - 1; i++) { const a = keys[i], b = keys[i + 1]; if (t <= b[0]) return lerp(a[1], b[1], smooth((t - a[0]) / Math.max(1e-6, b[0] - a[0]))); }
+  return keys[keys.length - 1][1];
+}
+SEQ = buildSequence(DEFAULTS.shots);
+
+/* =====================================================================
+   3. SHADERS
+   ===================================================================== */
+const GLSL_COMMON = `
+  uniform vec3 uCol[7];
+  uniform float uPhase;   // 0..2PI over one loop, so everything loops cleanly
+  uniform float uWarp;
+  vec3 heatRamp(float v){
+    v = clamp(v, 0.0, 1.0);
+    vec3 c = uCol[0];
+    c = mix(c, uCol[1], smoothstep(0.00, 0.20, v));
+    c = mix(c, uCol[2], smoothstep(0.20, 0.40, v));
+    c = mix(c, uCol[3], smoothstep(0.40, 0.54, v));
+    c = mix(c, uCol[4], smoothstep(0.54, 0.66, v));
+    c = mix(c, uCol[5], smoothstep(0.66, 0.84, v));
+    c = mix(c, uCol[6], smoothstep(0.84, 1.00, v));
+    return c;
+  }
+  // smooth flowing scalar field, roughly 0..1
+  float field(vec2 p, float ph){
+    vec2 q = p;
+    q += uWarp * vec2(sin(q.y * 1.3 + ph), cos(q.x * 1.1 - ph));
+    q += uWarp * 0.6 * vec2(sin(q.y * 2.1 - 2.0 * ph + 1.7), cos(q.x * 2.3 + ph + 0.6));
+    float v = sin(q.x * 1.2 + ph) + sin(q.y * 1.5 - ph + 0.8)
+            + sin((q.x + q.y) * 0.8 + 2.0 * ph)
+            + sin(length(q - 1.2 * vec2(cos(ph), sin(ph))) * 1.7 - ph);
+    return v * 0.125 + 0.5;
+  }
+`;
+
+const BG_VERT = `varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 1.0, 1.0); }`;
+const BG_FRAG = `
+  precision highp float;
+  varying vec2 vUv;
+  uniform float uAspect, uScale, uContrast, uHeat;
+  ${GLSL_COMMON}
+  void main(){
+    vec2 p = (vUv - 0.5) * vec2(uAspect, 1.0) * uScale * 2.4 + vec2(3.1, 1.7);
+    float f = field(p, uPhase);
+    float v = (f - 0.5) * uContrast * 1.6 + 0.3 + uHeat;
+    gl_FragColor = vec4(heatRamp(v), 1.0);
+  }
+`;
+
+const KEY_VERT = `
+  attribute vec3 aN0;                 // un-tapered normal, used to find bevel edges
+  varying vec3 vN0, vNw, vWp, vOp;
+  void main(){
+    vN0 = aN0; vOp = position;
+    vec4 wp = modelMatrix * vec4(position, 1.0);
+    vWp = wp.xyz;
+    vNw = normalize(mat3(modelMatrix) * normal);
+    gl_Position = projectionMatrix * viewMatrix * wp;
+  }
+`;
+const KEY_FRAG = `
+  precision highp float;
+  varying vec3 vN0, vNw, vWp, vOp;
+  uniform float uAlpha, uOpacity, uPattern, uNormalInf, uContrast, uHeat, uTopHeat, uEdge, uRim, uLegendOp, uSeed, uDepth;
+  uniform vec3 uHalf;                 // half size of this key
+  uniform vec3 uEdgeCol;
+  uniform sampler2D uAtlas;
+  uniform vec4 uLegend;               // atlas rect: x, y, w, h
+  ${GLSL_COMMON}
+  void main(){
+    vec3 V = normalize(cameraPosition - vWp);
+    vec3 N = normalize(vNw) * (gl_FrontFacing ? 1.0 : -1.0);
+    float ndv = clamp(dot(N, V), 0.0, 1.0);
+    vec3 Nv = normalize((viewMatrix * vec4(N, 0.0)).xyz);
+
+    // the "thermal" value: a flowing field looked up by position and facing
+    vec2 p = (vWp.xy + vWp.z * vec2(0.55, -0.35)) * uPattern + Nv.xy * uNormalInf + uSeed;
+    float f = field(p, uPhase);
+    // each key glows hottest at the middle of its top face and cools towards its base
+    vec3 o = (vOp - vec3(0.0, uHalf.y, 0.0)) / vec3(uHalf.x, uHalf.y * 2.2, uHalf.z);
+    float core = 1.0 - smoothstep(0.15, 1.9, length(o));
+    float v = (f - 0.5) * uContrast + 0.3 + uHeat + uTopHeat * (core - 0.45) - (1.0 - ndv) * 0.15;
+    vec3 col = heatRamp(v);
+
+    float e = 1.0 - max(abs(vN0.x), max(abs(vN0.y), abs(vN0.z)));   // 0 on flats, >0 on bevels
+    float line = smoothstep(0.17, 0.29, e) * uEdge;
+    float rim = pow(1.0 - ndv, 4.0) * uRim;
+
+    if (!gl_FrontFacing) {            // inside of the glass: body colour plus edge lines
+      col = mix(col * 0.92, uEdgeCol, clamp(line * 0.8, 0.0, 1.0));
+      gl_FragColor = vec4(col, uAlpha);
+      return;
+    }
+    col = mix(col, uEdgeCol, clamp(line + rim, 0.0, 1.0));
+
+    float leg = 0.0;                  // legend printed on the top face
+    if (vN0.y > 0.92 && uLegend.z > 0.0) {
+      vec2 uv = vec2(vOp.x, vOp.z) / uDepth + 0.5;
+      if (uv.x > 0.0 && uv.x < 1.0 && uv.y > 0.0 && uv.y < 1.0)
+        leg = texture2D(uAtlas, uLegend.xy + uv * uLegend.zw).a * uLegendOp;
+    }
+    col = mix(col, vec3(1.0), leg);
+    float a = mix(uOpacity, 1.0, clamp(max(line, leg), 0.0, 1.0));
+    gl_FragColor = vec4(col, a * uAlpha);
+  }
+`;
+
+/* =====================================================================
+   4. SCENE SETUP
+   ===================================================================== */
+const stage = document.getElementById("stage");
+const canvas = document.getElementById("gl");
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false, powerPreference: "high-performance" });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(P.fov, 16 / 9, 0.1, 200);
+scene.add(camera);
+
+const cols = Array.from({ length: 7 }, () => new THREE.Color());
+const shared = {                       // uniforms shared by every material
+  uCol: { value: cols }, uPhase: { value: 0 }, uWarp: { value: P.bgWarp },
+};
+const keyShared = {
+  uOpacity: { value: 1 }, uPattern: { value: 1 }, uNormalInf: { value: 1 }, uContrast: { value: 1 }, uHeat: { value: 0 },
+  uTopHeat: { value: 0 }, uEdge: { value: 1 }, uRim: { value: 1 }, uLegendOp: { value: 1 }, uEdgeCol: { value: new THREE.Color() },
+  uAtlas: { value: null },
+};
+const boardAlpha = { value: 1 }, floatAlpha = { value: 1 };
+
+// backdrop
+const bgUniforms = Object.assign({ uAspect: { value: 16 / 9 }, uScale: { value: 1 }, uContrast: { value: 1 }, uHeat: { value: 0 } }, shared);
+const bg = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.ShaderMaterial({ vertexShader: BG_VERT, fragmentShader: BG_FRAG, uniforms: bgUniforms, depthTest: false, depthWrite: false }));
+bg.frustumCulled = false; bg.renderOrder = -10; scene.add(bg);
+
+/* ---- keycap mesh: a rounded box, tapered towards the top ---- */
+const CAP = { depth: 0.9, height: 0.72, radius: 0.15, taper: 0.2, gap: 0.1 };
+const geoCache = {};
+function keycapGeometry(units) {
+  if (geoCache[units]) return geoCache[units];
+  const w = units - CAP.gap, h = CAP.height, d = CAP.depth, r = CAP.radius, S = 7;
+  const g = new THREE.BoxGeometry(w, h, d, S, S, S);
+  const pos = g.attributes.position, nor = g.attributes.normal, n0 = new Float32Array(pos.count * 3);
+  const half = [w / 2, h / 2, d / 2], size = [w, h, d];
+  const steps = [0, r / 3, 2 * r / 3, r];                    // 4 verts across each bevel
+  const v = [0, 0, 0], inner = [0, 0, 0], dl = [0, 0, 0];
+  for (let i = 0; i < pos.count; i++) {
+    v[0] = pos.getX(i); v[1] = pos.getY(i); v[2] = pos.getZ(i);
+    for (let a = 0; a < 3; a++) {                            // re-space the grid so bevels get the detail
+      const k = Math.round((v[a] / size[a] + 0.5) * S);
+      v[a] = k <= 3 ? -half[a] + steps[k] : half[a] - steps[S - k];
+      inner[a] = clamp(v[a], -half[a] + r, half[a] - r);
+      dl[a] = v[a] - inner[a];
+    }
+    const len = Math.hypot(dl[0], dl[1], dl[2]);
+    let nx = nor.getX(i), ny = nor.getY(i), nz = nor.getZ(i);
+    if (len > 1e-6) { nx = dl[0] / len; ny = dl[1] / len; nz = dl[2] / len; }
+    let x = inner[0] + nx * r, y = inner[1] + ny * r, z = inner[2] + nz * r;
+    if (len <= 1e-6) { x = v[0]; y = v[1]; z = v[2]; }
+    n0[i * 3] = nx; n0[i * 3 + 1] = ny; n0[i * 3 + 2] = nz;
+    const s = 1 - CAP.taper * (y + h / 2) / h;               // taper: top is narrower than base
+    const inset = CAP.taper * d / 2;                         // same absolute inset on every side
+    const sx = 1 - (inset * 2 / w) * (y + h / 2) / h;
+    pos.setXYZ(i, x * sx, y, z * s);
+    const side = Math.hypot(nx, nz), tilt = inset / h;
+    const tn = new THREE.Vector3(nx, ny + side * tilt, nz).normalize();
+    nor.setXYZ(i, tn.x, tn.y, tn.z);
+  }
+  g.setAttribute("aN0", new THREE.BufferAttribute(n0, 3));
+  return (geoCache[units] = g);
+}
+
+/* ---- legend atlas: all key labels drawn into one canvas texture ---- */
+const ATLAS = { cols: 16, rows: 8, cell: 128 };
+const atlasCanvas = document.createElement("canvas");
+atlasCanvas.width = ATLAS.cols * ATLAS.cell; atlasCanvas.height = ATLAS.rows * ATLAS.cell;
+const atlasTex = new THREE.CanvasTexture(atlasCanvas);
+atlasTex.flipY = false; atlasTex.minFilter = THREE.LinearMipmapLinearFilter; atlasTex.anisotropy = 4;
+keyShared.uAtlas.value = atlasTex;
+const legendIndex = new Map();
+function legendRect(label) {
+  if (!label) return new THREE.Vector4(0, 0, 0, 0);
+  if (!legendIndex.has(label)) legendIndex.set(label, legendIndex.size);
+  const i = legendIndex.get(label);
+  return new THREE.Vector4((i % ATLAS.cols) / ATLAS.cols, Math.floor(i / ATLAS.cols) / ATLAS.rows, 1 / ATLAS.cols, 1 / ATLAS.rows);
+}
+function drawAtlas() {
+  const c = atlasCanvas.getContext("2d"), s = ATLAS.cell;
+  c.clearRect(0, 0, atlasCanvas.width, atlasCanvas.height);
+  c.fillStyle = "#fff"; c.textAlign = "center"; c.textBaseline = "middle";
+  legendIndex.forEach((i, label) => {
+    const x = (i % ATLAS.cols) * s + s / 2, y = Math.floor(i / ATLAS.cols) * s + s / 2;
+    const words = label.length > 1 && label !== "✦";
+    c.font = `500 ${label === "✦" ? 78 : words ? (label.length > 5 ? 22 : 30) : 58}px Outfit, system-ui, sans-serif`;
+    c.fillText(label, x, y + 2, s - 10);
+  });
+  atlasTex.needsUpdate = true;
+}
+
+/* ---- key factory ---- */
+function makeKey(label, units, alphaUniform, seed) {
+  const uniforms = Object.assign({
+    uAlpha: alphaUniform, uLegend: { value: legendRect(label) }, uSeed: { value: seed }, uDepth: { value: CAP.depth * (1 - CAP.taper) },
+    uHalf: { value: new THREE.Vector3((units - CAP.gap) / 2, CAP.height / 2, CAP.depth / 2) },
+  }, shared, keyShared);
+  const mat = new THREE.ShaderMaterial({ vertexShader: KEY_VERT, fragmentShader: KEY_FRAG, uniforms, transparent: true, side: THREE.DoubleSide });
+  return new THREE.Mesh(keycapGeometry(units), mat);
+}
+
+/* ---- keyboard ---- */
+const board = new THREE.Group(); scene.add(board);
+const boardKeys = [];
+{
+  const rand = rng(7);
+  ROWS.forEach(row => {
+    const total = row.keys.reduce((s, k) => s + k[1], 0);
+    let x = -total / 2;
+    row.keys.forEach(([label, units]) => {
+      if (label !== "_") {
+        const m = makeKey(label, units, boardAlpha, rand() * 0.6);
+        const base = new THREE.Vector3(x + units / 2, 0, row.z);
+        m.position.copy(base); board.add(m);
+        const wide = units > 3;
+        boardKeys.push({
+          mesh: m, base, pick: rand(), thr: rand() * 0.3,
+          dir: new THREE.Vector3((rand() - 0.5) * 1.3, 0.55 + rand() * 1.1, -0.25 + rand() * 1.0),
+          spin: new THREE.Vector3((rand() - 0.5) * 2.6, (rand() - 0.5) * 2.0, (rand() - 0.5) * 2.6),
+          wide,
+        });
+      }
+      x += units;
+    });
+  });
+}
+
+/* ---- floating keys (children of the camera, so they sit in view space) ---- */
+const floatSets = FLOAT_SETS.map((set, si) => set.map((f, i) => {
+  const m = makeKey(f.legend, f.w, floatAlpha, 0.3 + i * 0.37 + si * 0.21);
+  m.visible = false; camera.add(m);
+  const rand = rng(100 + si * 17 + i);
+  return { mesh: m, cfg: f, from: new THREE.Vector3((rand() - 0.5) * 3, -3.2 - rand() * 2, 6.2), ph: rand() * 6.28 };
+}));
+
+/* =====================================================================
+   5. TYPE OVERLAY  (plain DOM so it stays crisp and editable)
+   ===================================================================== */
+const el = id => document.getElementById(id);
+let chars = [];                                   // headline letters with their timings
+function fillLetters(node, text, animated, seedBase, lineDelay) {
+  node.textContent = "";
+  const rand = rng(seedBase);
+  text.split(/(\s+)/).forEach(word => {
+    if (!word) return;
+    const w = document.createElement("span"); w.className = "wd";
+    if (P.slantAI && /^A\.?I\.?$/i.test(word.trim()) && word.trim().length === 2) w.classList.add("slant");
+    for (const ch of word) {
+      const s = document.createElement("span"); s.className = "ch"; s.textContent = ch; w.appendChild(s);
+      if (animated && ch.trim()) chars.push({ node: s, delay: lineDelay + rand() * 1.15, dx: (rand() - 0.35) * 1.1, dy: -(0.35 + rand() * 0.75), last: -1 });
+    }
+    node.appendChild(w);
+  });
+}
+function buildText() {
+  chars = [];
+  fillLetters(el("kicker"), P.kicker, true, 11, 0.0);
+  const lines = el("lines"); lines.textContent = "";
+  [P.line1, P.line2, P.line3].forEach((t, i) => { if (!t) return; const d = document.createElement("div"); d.className = "line"; lines.appendChild(d); fillLetters(d, t, true, 21 + i, 0.1 + i * 0.42); });
+  for (const id of ["lockup", "bigtitle"]) {
+    const n = el(id); n.textContent = "";
+    [P.title1, P.title2].forEach(t => { if (!t) return; const d = document.createElement("div"); n.appendChild(d); fillLetters(d, t, false, 1, 0); });
+  }
+  const ov = el("overlay");
+  ov.style.color = P.textColor; ov.style.fontWeight = P.weight;
+  ov.style.display = P.showText ? "" : "none";
+  el("headline").style.transformOrigin = "0 0"; el("lockup").style.transformOrigin = "100% 0";
+  fitText();
+}
+
+/* Type adapts to the format: one unit (--u) grows as the frame gets narrower,
+   blocks shift, and anything still too wide is scaled down to fit. */
+const fit = { head: 9, lock: 9, big: 9, tall: 0 };
+function widest(node) {
+  let m = 1;
+  node.querySelectorAll("div").forEach(d => { if (d.querySelector(":scope > .wd")) { let w = 0; for (const c of d.children) w += c.offsetWidth; m = Math.max(m, w); } });
+  return m;
+}
+function fitText() {
+  const W = stage.clientWidth, H = stage.clientHeight; if (!W || !H) return;
+  const narrow = Math.max(1, (16 / 9) / (W / H));           // 1 at 16:9, 3.16 at 9:16
+  stage.style.setProperty("--u", (W / 100 * Math.pow(narrow, 0.7)) + "px");
+  fit.tall = clamp((narrow - 1) / 2.16);
+  fit.head = 0.84 * W / widest(el("headline"));
+  fit.lock = 0.42 * W / widest(el("lockup"));
+  fit.big = 0.88 * W / widest(el("bigtitle"));
+  el("headline").style.top = lerp(25.5, 15.5, fit.tall) + "%";
+  el("lockup").style.top = lerp(8.2, 4.2, fit.tall) + "%";
+  el("bigtitle").style.top = lerp(30, 37, fit.tall) + "%";
+}
+
+function updateText(t) {
+  const Tt = SEQ.titleAt, end = SEQ.total;         // when the title shots begin, and the loop length
+  // headline letters drop into place in a shuffled order
+  const tt = (t - 0.3) * P.typeSpeed;
+  for (const c of chars) {
+    const k = clamp((tt - c.delay) / 0.28);
+    if (k === c.last) continue; c.last = k;
+    const e = easeOut(k);
+    c.node.style.opacity = k > 0 ? 1 : 0;
+    c.node.style.transform = k >= 1 ? "" : `translate(${(c.dx * (1 - e)).toFixed(3)}em, ${(c.dy * (1 - e)).toFixed(3)}em)`;
+  }
+  const s = P.textScale;
+  const headOut = ramp(t, Tt - 0.15, Tt + 0.3);
+  const head = el("headline");
+  head.style.opacity = 1 - headOut; head.style.filter = headOut > 0 && headOut < 1 ? `blur(${(headOut * 0.9).toFixed(2)}cqw)` : "";
+  head.style.transform = `scale(${Math.min(s, fit.head).toFixed(4)})`;
+  const lock = el("lockup");
+  lock.style.opacity = Math.max(1 - ramp(t, Tt - 0.15, Tt + 0.2), ramp(t, end - 0.35, end - 0.05));
+  lock.style.transform = `scale(${Math.min(s, fit.lock).toFixed(4)})`;
+  const big = el("bigtitle");
+  const bin = ramp(t, Tt + 0.1, Tt + 0.55), bout = ramp(t, end - 0.5, end - 0.15);
+  big.style.opacity = bin * (1 - bout);
+  big.style.filter = bin > 0 && bin < 1 ? `blur(${((1 - bin) * 1.2).toFixed(2)}cqw)` : "";
+  big.style.transform = `scale(${(Math.min(s, fit.big) * (1.08 - 0.08 * bin - 0.1 * bout)).toFixed(4)})`;
+  // logo row sits low under the headline, and tucks under the big title
+  const up = bin * (1 - ramp(t, end - 0.45, end - 0.05));
+  el("logos").style.top = lerp(lerp(81.5, 88, fit.tall), lerp(64, 56, fit.tall), up) + "%";
+}
+
+/* =====================================================================
+   6. ANIMATION  – everything is a pure function of loop time t
+   ===================================================================== */
+const _p = new THREE.Vector3(), _q = new THREE.Vector3(), _e = new THREE.Euler();
+function setCamera(c, k) {
+  const e = c.ease > 1 ? 1 - Math.pow(1 - k, c.ease) : k, A = c.from, B = c.to;
+  if (A.az !== undefined) {
+    const az = lerp(A.az, B.az, e) * Math.PI / 180, r = lerp(A.r, B.r, e);
+    _p.set(Math.sin(az) * r, lerp(A.h, B.h, e), Math.cos(az) * r);
+    _q.set(lerp(A.look[0], B.look[0], e), lerp(A.look[1], B.look[1], e), lerp(A.look[2], B.look[2], e));
+  } else {
+    _p.set(lerp(A.p[0], B.p[0], e), lerp(A.p[1], B.p[1], e), lerp(A.p[2], B.p[2], e));
+    _q.set(lerp(A.q[0], B.q[0], e), lerp(A.q[1], B.q[1], e), lerp(A.q[2], B.q[2], e));
+  }
+  camera.position.copy(_p); camera.lookAt(_q);
+}
+
+function update(t) {
+  // --- uniforms from settings
+  for (let i = 0; i < 7; i++) cols[i].set(DEFAULTS["c" + i]).offsetHSL(P.hue / 360, 0, 0);
+  shared.uPhase.value = (t / SEQ.total) * Math.PI * 2 * Math.round(P.bgFlow);
+  shared.uWarp.value = P.bgWarp;
+  bgUniforms.uScale.value = P.bgScale; bgUniforms.uContrast.value = P.bgContrast;
+  keyShared.uOpacity.value = P.keyOpacity; keyShared.uPattern.value = P.keyPattern; keyShared.uNormalInf.value = P.keyNormal;
+  keyShared.uContrast.value = P.keyContrast; keyShared.uHeat.value = P.keyHeat; keyShared.uTopHeat.value = P.keyTopHeat;
+  keyShared.uEdge.value = P.edgeStrength; keyShared.uRim.value = P.rimStrength; keyShared.uLegendOp.value = P.legendOpacity;
+  keyShared.uEdgeCol.value.set(P.edgeColor);
+  // narrower formats get a wider lens so the scene still reads
+  const narrow = Math.max(1, (16 / 9) / camera.aspect);
+  const fov = 2 * Math.atan(Math.tan(P.fov * Math.PI / 360) * Math.sqrt(narrow)) * 180 / Math.PI;
+  if (Math.abs(camera.fov - fov) > 1e-4) { camera.fov = fov; camera.updateProjectionMatrix(); }
+  const halfH = 10 * Math.tan(fov * Math.PI / 360), halfW = halfH * camera.aspect;
+
+  // --- which shot are we in?
+  const shots = SEQ.shots; let si = shots.length - 1;
+  for (let i = 0; i < shots.length; i++) if (t < shots[i].start + shots[i].def.len) { si = i; break; }
+  const shot = shots[si], def = shot.def, next = shots[(si + 1) % shots.length].def;
+  const tau = t - shot.start, k = clamp(tau / def.len);            // seconds into the shot, and its progress 0..1
+  const single = shots.length === 1;
+  bgUniforms.uHeat.value = P.bgHeat + keyed(def.heat, tau) * P.heatAnim;
+
+  // --- keyboard shots
+  const boardOn = !!def.cam;
+  board.visible = boardOn;
+  if (boardOn) {
+    setCamera(def.cam, k);
+    const scatter = !single && next.float !== undefined;            // next shot is floating keys: the board lifts away
+    boardAlpha.value = (def.fadeIn ? ramp(tau, def.fadeIn[0], def.fadeIn[1]) : 1) * (scatter ? 1 - ramp(tau, def.len - 0.3, def.len - 0.02) : 1);
+    const B = lerp(def.burst[0], def.burst[1], Math.pow(k, 0.8));
+    const exit = scatter ? easeIn((tau - (def.len - 0.5)) / 0.5) : 0;
+    const waveX = def.ripple ? lerp(-10.5, 10.5, k) : 0;
+    for (const key of boardKeys) {
+      const lifted = key.pick < P.burstShare && !key.wide;
+      let l = lifted ? Math.max(0, B - key.thr) / (1 - key.thr) : 0;
+      if (exit > 0) l += exit * (lifted ? 1.6 : 0.9 + key.pick);
+      const d = Math.pow(l, 1.25) * P.burstHeight;
+      let wave = 0;
+      if (def.ripple) { const u = (key.base.x + key.base.z * 0.6 - waveX) / 1.9; wave = Math.exp(-u * u) * 0.5 * P.burstHeight * def.ripple; }
+      key.mesh.position.set(key.base.x + key.dir.x * d, key.base.y + key.dir.y * d + wave, key.base.z + key.dir.z * d);
+      const r = l * P.tumble + wave * 0.12 * P.tumble;
+      key.mesh.rotation.set(key.spin.x * r, key.spin.y * r, key.spin.z * r);
+    }
+  }
+
+  // --- floating-key shots: keys rush in past the camera, settle and drift
+  const softNext = !single && next.blur ? next.blur[0] : 0;         // next shot opens out of focus: melt into it
+  floatSets.forEach((set, idx) => {
+    const on = def.float === idx;
+    for (const f of set) {
+      f.mesh.visible = on; if (!on) continue;
+      const c = f.cfg, arrive = easeOut((tau + 0.3 - c.delay) / 1.25), lt = tau - 0.5, dr = P.floatDrift;
+      const size = Math.pow(clamp(halfW / 5.4, 0.3, 1), 0.6);     // smaller keys in narrow formats
+      f.mesh.position.set(
+        c.at[0] * halfW + f.from.x * (1 - arrive) + lt * 0.012 * dr * Math.cos(f.ph),
+        c.at[1] * halfH + f.from.y * (1 - arrive) + lt * 0.022 * dr,
+        -10 + f.from.z * (1 - arrive));
+      f.mesh.scale.setScalar(c.scale * P.floatScale * size);
+      _e.set(c.rot[0] + (1 - arrive) * 1.4 + lt * 0.018 * dr * Math.sin(f.ph),
+             c.rot[1] - (1 - arrive) * 1.1 + lt * 0.035 * dr,
+             c.rot[2] + lt * 0.014 * dr * Math.cos(f.ph * 1.7));
+      f.mesh.rotation.copy(_e);
+    }
+  });
+  floatAlpha.value = softNext ? 1 - ramp(tau, def.len - 0.45, def.len) : 1;
+
+  // --- soft focus: CSS blur on the canvas
+  const own = def.blur ? lerp(def.blur[0], def.blur[1], ramp(tau, def.len * 0.45, def.len)) : 0;
+  const blur = Math.max(own, softNext * ramp(tau, def.len - 0.55, def.len)) * P.blur;
+  canvas.style.filter = blur > 0.01 ? `blur(${blur.toFixed(2)}cqw)` : "";
+  canvas.style.transform = blur > 0.01 ? `scale(${(1 + blur * 0.035).toFixed(3)})` : "";
+
+  Music.frame(P.blur > 0 ? blur / P.blur : 0, bgUniforms.uHeat.value);
+  updateText(t);
+  renderer.render(scene, camera);
+}
+
+/* =====================================================================
+   8. MUSIC  – four generative tracks, synthesised live with Web Audio.
+   Nothing is sampled. Every bar re-reads the dials, so the sound follows them.
+   ===================================================================== */
+const Music = (() => {
+  let ctx = null, master, tone, comp, revIn, delIn, delay, delFb, noiseBuf, analyser;
+  let timer = null, step = 0, nextT = 0, style = "off", live = { blur: 0, heat: 0 };
+  const mtof = m => 440 * Math.pow(2, (m - 69) / 12);
+  const PENTA = [0, 3, 5, 7, 10], DORIAN = [0, 2, 3, 5, 7, 9, 10];
+  const pick = a => a[Math.floor(Math.random() * a.length)];
+
+  /* ---- how the dials drive the sound ---- */
+  function dials() {
+    const bright = clamp(0.5 + P.bgHeat * 0.9 + (P.keyTopHeat - 0.9) * 0.25 + P.keyHeat * 0.6 + live.heat * 0.35);
+    return {
+      root: Math.round(P.hue / 30),                             // Hue        -> key (semitones)
+      speed: clamp(P.speed, 0.4, 2.5),                          // Speed      -> tempo
+      cut: 180 * Math.pow(2, bright * 5.4),                     // Heat / Hot tops -> filter brightness
+      q: 0.7 + P.bgContrast * 5 + P.keyContrast * 1.5,          // Contrast   -> resonance
+      detune: 4 + P.bgWarp * 22,                                // Warp       -> detune / width
+      wet: clamp(0.15 + P.blur / 5 * 0.7),                      // Blur       -> reverb
+      echo: clamp(0.15 + P.floatDrift * 0.14, 0, 0.78),         // Float drift -> echo feedback
+      dense: clamp(P.burstShare * 1.2),                         // Keys that lift -> note density
+      hit: clamp(0.35 + P.burstHeight / 6 * 0.9, 0, 1.3),       // Burst height -> drum weight
+      swing: clamp(P.tumble / 3) * 0.3,                         // Tumble     -> swing
+      glass: clamp(P.keyOpacity),                               // Glass opacity -> how closed/soft the hats are
+      edge: clamp(P.edgeStrength / 1.5),                        // Edge lines -> hat / click level
+      move: Math.round(P.bgFlow),                               // Flow speed -> how often chords move
+    };
+  }
+
+  function init() {
+    ctx = new (window.AudioContext || window.webkitAudioContext)();
+    master = ctx.createGain(); master.gain.value = 0;
+    tone = ctx.createBiquadFilter(); tone.type = "lowpass"; tone.frequency.value = 18000; tone.Q.value = 0.5;
+    comp = ctx.createDynamicsCompressor(); comp.threshold.value = -14; comp.ratio.value = 5; comp.attack.value = 0.004; comp.release.value = 0.18;
+    analyser = ctx.createAnalyser(); analyser.fftSize = 2048;
+    master.connect(tone); tone.connect(comp); comp.connect(analyser); comp.connect(ctx.destination);
+    // reverb: a generated noise tail
+    const len = Math.floor(ctx.sampleRate * 3.4), ir = ctx.createBuffer(2, len, ctx.sampleRate);
+    for (let c = 0; c < 2; c++) { const d = ir.getChannelData(c); for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 2.6); }
+    const rev = ctx.createConvolver(); rev.buffer = ir; revIn = ctx.createGain(); revIn.connect(rev); rev.connect(master);
+    // echo
+    delay = ctx.createDelay(2); delFb = ctx.createGain(); delIn = ctx.createGain();
+    const delTone = ctx.createBiquadFilter(); delTone.type = "lowpass"; delTone.frequency.value = 3200;
+    delIn.connect(delay); delay.connect(delTone); delTone.connect(delFb); delFb.connect(delay); delTone.connect(master); delTone.connect(revIn);
+    noiseBuf = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
+    const n = noiseBuf.getChannelData(0); for (let i = 0; i < n.length; i++) n[i] = Math.random() * 2 - 1;
+  }
+  function out(node, rev, del) {
+    node.connect(master);
+    if (rev > 0) { const g = ctx.createGain(); g.gain.value = rev; node.connect(g); g.connect(revIn); }
+    if (del > 0) { const g = ctx.createGain(); g.gain.value = del; node.connect(g); g.connect(delIn); }
+  }
+
+  /* ---- instruments ---- */
+  function synth(t, o) {            // one filtered oscillator note
+    const dur = Math.max(o.a || 0.005, o.dur), r = o.r || 0.08, end = t + dur + r;
+    const osc = ctx.createOscillator(); osc.type = o.type || "sawtooth"; osc.frequency.setValueAtTime(mtof(o.note), t); osc.detune.value = o.det || 0;
+    const f = ctx.createBiquadFilter(); f.type = "lowpass"; f.Q.value = o.q || 0.8;
+    const cut = clamp(o.cut || 4000, 60, 16000);
+    f.frequency.setValueAtTime(clamp(cut * (1 + (o.fenv || 0)), 60, 18000), t); f.frequency.exponentialRampToValueAtTime(cut, t + Math.min(dur, o.fdec || 0.2) + 0.01);
+    const g = ctx.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(o.vol || 0.1, t + (o.a || 0.005));
+    g.gain.setValueAtTime(o.vol || 0.1, t + dur); g.gain.exponentialRampToValueAtTime(0.0001, end);
+    osc.connect(f); f.connect(g); out(g, o.rev || 0, o.del || 0); osc.start(t); osc.stop(end + 0.05);
+  }
+  function chord(t, notes, o, D) {  // stacked, detuned notes
+    notes.forEach((n, i) => { synth(t, Object.assign({}, o, { note: n, det: (i % 2 ? 1 : -1) * D.detune })); if (o.wide) synth(t, Object.assign({}, o, { note: n, det: (i % 2 ? -1 : 1) * D.detune * 0.6, vol: o.vol * 0.7 })); });
+  }
+  function hiss(t, o) {             // filtered noise burst: hats, snares, clicks
+    const src = ctx.createBufferSource(); src.buffer = noiseBuf; src.loop = true;
+    const f = ctx.createBiquadFilter(); f.type = o.type || "highpass"; f.frequency.value = o.f || 7000; f.Q.value = o.q || 0.7;
+    const g = ctx.createGain(); g.gain.setValueAtTime(o.vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + o.dur);
+    src.connect(f); f.connect(g); out(g, o.rev || 0, 0); src.start(t, Math.random() * 0.5); src.stop(t + o.dur + 0.02);
+  }
+  function kick(t, vol, top, len) {
+    const osc = ctx.createOscillator(), g = ctx.createGain();
+    osc.frequency.setValueAtTime(top || 150, t); osc.frequency.exponentialRampToValueAtTime(46, t + 0.09);
+    g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + (len || 0.3));
+    osc.connect(g); out(g, 0, 0); osc.start(t); osc.stop(t + (len || 0.3) + 0.02);
+  }
+  function snare(t, vol, rev) {
+    hiss(t, { type: "bandpass", f: 1900, q: 0.8, vol: vol, dur: 0.16, rev: rev });
+    hiss(t, { type: "highpass", f: 5200, vol: vol * 0.5, dur: 0.09, rev: rev });
+    const osc = ctx.createOscillator(), g = ctx.createGain(); osc.type = "triangle";
+    osc.frequency.setValueAtTime(240, t); osc.frequency.exponentialRampToValueAtTime(170, t + 0.07);
+    g.gain.setValueAtTime(vol * 0.7, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.11);
+    osc.connect(g); out(g, rev, 0); osc.start(t); osc.stop(t + 0.14);
+  }
+  const hat = (t, vol, D, open) => hiss(t, { f: 6500 + D.cut * 0.25, vol: vol * (0.4 + D.edge), dur: open ? 0.22 : 0.025 + (1 - D.glass) * 0.09 });
+
+  /* ---- the four tracks: bpm, plus what happens on each 16th-note step ---- */
+  const TRACKS = {
+    ambient: { bpm: 66, step(i, t, D, sd) {
+      const bar = 32 / D.move, k = 50 + D.root;
+      const prog = [[0, 7, 10, 14, 17], [-4, 3, 7, 10, 14], [-2, 5, 8, 12, 15], [-7, 0, 7, 9, 16]];
+      if (i % bar === 0) {
+        const c = prog[Math.floor(i / bar) % 4].map(n => k + n);
+        chord(t, c, { type: "sawtooth", dur: sd * bar * 0.9, a: sd * 6, r: sd * 14, vol: 0.05, cut: D.cut * 0.45, q: D.q * 0.4, rev: 0.5 + D.wet, wide: true }, D);
+        synth(t, { type: "sine", note: c[0] - 12, dur: sd * bar, a: sd * 4, r: sd * 8, vol: 0.12, cut: 800 });
+      }
+      if (Math.random() < 0.08 + D.dense * 0.3) {
+        const n = k + 24 + pick(PENTA) + pick([0, 0, 12]);
+        synth(t, { type: Math.random() < 0.5 ? "sine" : "triangle", note: n, dur: 0.05, r: 1.6 + D.wet * 2, vol: 0.05 + D.hit * 0.03, cut: D.cut * 1.5, rev: 0.4 + D.wet, del: 0.5 });
+      }
+    } },
+
+    minimal: { bpm: 122, step(i, t, D, sd) {
+      const s = i % 16, bar = Math.floor(i / 16), k = 45 + D.root;
+      if (s % 4 === 0) kick(t, 0.5 + D.hit * 0.25, 120, 0.22);
+      if (s % 4 === 2) hat(t, 0.1, D);
+      if ([3, 6, 11, 14].includes(s) && Math.random() < D.dense + 0.15) hiss(t, { type: "bandpass", f: 2400 + s * 150, q: 6, vol: 0.12 * (0.4 + D.edge), dur: 0.035, rev: D.wet * 0.4 });
+      if ((s === 4 || s === 12) && D.hit > 0.6) hiss(t, { type: "bandpass", f: 1500, q: 1.2, vol: 0.09, dur: 0.1, rev: 0.2 + D.wet * 0.5 });
+      if ([2, 5, 10].includes(s)) synth(t, { type: "triangle", note: k - 12 + (s === 10 && bar % 2 ? 3 : 0), dur: sd * 0.7, r: 0.06, vol: 0.3, cut: 300 + D.cut * 0.15, q: 1 });
+      const motif = [0, -1, -1, 2, -1, 0, -1, -1, 4, -1, -1, 3, -1, -1, 0, -1];   // -1 = rest
+      const deg = motif[(s + (Math.floor(bar / 4) % 4) * 3) % 16];
+      if (deg >= 0 && Math.random() < 0.55 + D.dense * 0.45)
+        synth(t, { type: "square", note: k + 24 + PENTA[deg], dur: sd * 0.4, r: 0.12, vol: 0.05, cut: D.cut * 0.6, q: 1 + D.q * 0.5, fenv: 1.5, fdec: 0.08, del: 0.35, rev: D.wet * 0.5 });
+    } },
+
+    tech: { bpm: 132, step(i, t, D, sd) {
+      const s = i % 16, bar = Math.floor(i / 16), k = 41 + D.root;
+      if (s % 4 === 0) { kick(t, 0.75 + D.hit * 0.2, 190, 0.32); hiss(t, { type: "lowpass", f: 140, vol: 0.25 * D.hit, dur: sd * 3, rev: 0.3 }); }
+      hat(t, s % 4 === 2 ? 0.16 : (Math.random() < 0.3 + D.dense * 0.7 ? 0.07 : 0), D, s % 4 === 2 && D.glass < 0.75);
+      if (s === 4 || s === 12) { hiss(t, { type: "bandpass", f: 1300, q: 1.5, vol: 0.2 + D.hit * 0.1, dur: 0.14, rev: 0.25 + D.wet * 0.5 }); }
+      if (s % 4 !== 0) {            // rolling off-beat bass with a squelchy filter
+        const n = k + (s === 7 ? 12 : s === 14 && bar % 2 ? 10 : s === 11 && bar % 4 === 3 ? 3 : 0);
+        synth(t, { type: "sawtooth", note: n, dur: sd * 0.55, r: 0.04, vol: 0.2, cut: 120 + D.cut * 0.3, q: 2 + D.q * 1.6, fenv: 2.5, fdec: 0.09 });
+      }
+      if ((s === 3 || s === 11) && bar % 2 === 1)
+        chord(t, [k + 24, k + 27, k + 31, k + 34], { type: "square", dur: sd * 0.6, r: 0.18, vol: 0.035, cut: D.cut * 0.7, q: 1 + D.q * 0.4, fenv: 1, del: 0.5, rev: D.wet * 0.6 }, D);
+      if (bar % 8 === 7 && s >= 12) hiss(t, { type: "highpass", f: 3000 + s * 500, vol: 0.06 * (s - 11), dur: sd, rev: 0.4 });
+    } },
+
+    jungle: { bpm: 168, step(i, t, D, sd) {
+      const s = i % 16, bar = Math.floor(i / 16), k = 38 + D.root, fill = bar % 4 === 3;
+      // chopped break
+      const kicks = bar % 2 ? [0, 6, 10] : [0, 10], snares = fill ? [4, 10, 12, 13, 15] : [4, 12], ghosts = [7, 9, 15];
+      if (kicks.includes(s) && !(fill && s === 10)) kick(t, 0.6 + D.hit * 0.25, 170, 0.2);
+      if (snares.includes(s)) snare(t, 0.3 + D.hit * 0.15, 0.12 + D.wet * 0.3);
+      else if (ghosts.includes(s) && Math.random() < 0.3 + D.dense * 0.7) snare(t, 0.09, 0.1);
+      if (s % 2 === 0) hat(t, s % 4 === 2 ? 0.14 : 0.09, D, s === 14 && bar % 2 === 1);
+      else if (Math.random() < D.dense * 0.8) hat(t, 0.05, D);
+      // deep sub line across two bars
+      const line = { 0: [0, 6], 10: [0, 3], 16: [-2, 5], 22: [3, 3], 26: [5, 4] }[i % 32];
+      if (line) { const o = ctx.createOscillator(), g = ctx.createGain(), d = sd * line[1];
+        o.frequency.setValueAtTime(mtof(k + line[0]), t); g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.36, t + 0.02);
+        g.gain.setValueAtTime(0.36, t + d); g.gain.exponentialRampToValueAtTime(0.0001, t + d + 0.12); o.connect(g); out(g, 0, 0); o.start(t); o.stop(t + d + 0.2); }
+      // wide pads and a far-off bell
+      const span = 64 / D.move;
+      if (i % span === 0) {
+        const c = [[0, 7, 10, 14, 15], [-4, 3, 8, 10, 15], [-2, 5, 9, 12, 17], [-5, 2, 7, 10, 14]][Math.floor(i / span) % 4].map(n => k + 24 + n);
+        chord(t, c, { type: "sawtooth", dur: sd * span * 0.92, a: sd * 8, r: sd * 16, vol: 0.028, cut: D.cut * 0.4, q: D.q * 0.3, rev: 0.6 + D.wet, wide: true }, D);
+      }
+      if ((s === 6 || s === 14) && Math.random() < 0.25 + D.dense * 0.3)
+        synth(t, { type: "sine", note: k + 48 + pick(DORIAN), dur: 0.04, r: 1.2, vol: 0.04, cut: 9000, rev: 0.6 + D.wet, del: 0.6 });
+    } },
+  };
+
+  function tick() {
+    const tr = TRACKS[style]; if (!tr) return;
+    while (nextT < ctx.currentTime + 0.14) {
+      const D = dials(), sd = 60 / (tr.bpm * D.speed) / 4;
+      delay.delayTime.setTargetAtTime(sd * 3, nextT, 0.05); delFb.gain.setTargetAtTime(D.echo, nextT, 0.05);
+      tr.step(step, nextT + (step % 2 ? D.swing * sd : 0), D, sd);
+      step++; nextT += sd;
+    }
+  }
+  return {
+    set(name) {                       // must be called from a tap or click
+      if (name !== "off" && !ctx) { try { init(); } catch (e) { return false; } }
+      style = name;
+      if (!ctx) return true;
+      if (ctx.state === "suspended") ctx.resume();
+      clearInterval(timer); timer = null;
+      master.gain.cancelScheduledValues(ctx.currentTime);
+      if (name === "off") { master.gain.setTargetAtTime(0, ctx.currentTime, 0.08); return true; }
+      master.gain.setTargetAtTime(P.volume, ctx.currentTime, 0.05);
+      step = 0; nextT = ctx.currentTime + 0.08; timer = setInterval(tick, 25); tick();
+      return true;
+    },
+    frame(blur, heat) {               // called every video frame: the picture's blur and heat shape the mix
+      live.blur = blur; live.heat = heat;
+      if (!ctx || style === "off") return;
+      tone.frequency.setTargetAtTime(18000 * Math.pow(1 - 0.9 * clamp(blur), 2) + 700, ctx.currentTime, 0.08);
+      master.gain.setTargetAtTime(P.volume, ctx.currentTime, 0.05);
+    },
+    resume() { if (ctx && ctx.state !== "running") ctx.resume(); },
+    get running() { return !!ctx && ctx.state === "running" && style !== "off"; },
+    get style() { return style; }, get analyser() { return analyser; },
+  };
+})();
+
+/* =====================================================================
+   7. PLAYBACK + CONTROLS
+   ===================================================================== */
+/* Each shot is authored at its own natural length; "Loop length" stretches the
+   whole assembled sequence to that many real seconds. */
+let head = 0, playing = true, last = performance.now();   // head = real seconds into the loop
+const scrub = el("scrub"), clock = el("clock"), playBtn = el("play");
+const internal = () => head / P.loopLength * SEQ.total;
+function showClock() { scrub.max = P.loopLength; scrub.value = head; clock.textContent = head.toFixed(2) + " / " + P.loopLength.toFixed(2); }
+function setShots() {                       // re-assemble the sequence; loop length follows its natural length
+  SEQ = buildSequence(P.shots); P.loopLength = Math.round(SEQ.total * 2) / 2; head = 0;
+  for (const c of chars) c.last = -1;
+}
+function tick(now) {
+  const dt = Math.min(0.1, (now - last) / 1000); last = now;
+  if (playing) head += dt * P.speed;
+  head = ((head % P.loopLength) + P.loopLength) % P.loopLength;
+  update(internal()); showClock(); showSound();
+  requestAnimationFrame(tick);
+}
+function setPlaying(v) { playing = v; playBtn.textContent = v ? "Pause" : "Play"; }
+playBtn.onclick = () => setPlaying(!playing);
+scrub.oninput = () => { setPlaying(false); head = parseFloat(scrub.value); };
+el("full").onclick = () => { try { (document.fullscreenElement ? document.exitFullscreen() : stage.requestFullscreen()).catch(() => {}); } catch (e) {} };
+function setAspect(a) {
+  P.aspect = a; const [w, h] = a.split(":").map(Number);
+  stage.style.aspectRatio = w + " / " + h;
+  stage.style.maxWidth = `calc((100vh - 150px) * ${w} / ${h})`;   // never taller than the window
+  document.querySelectorAll("[data-aspect]").forEach(b => b.classList.toggle("on", b.dataset.aspect === a));
+  resize();
+}
+document.querySelectorAll("[data-aspect]").forEach(b => b.onclick = () => setAspect(b.dataset.aspect));
+window.__seek = v => { setPlaying(false); head = v / SEQ.total * P.loopLength; update(internal()); showClock(); };   // handy from the console
+
+function resize() {
+  const w = stage.clientWidth, h = stage.clientHeight; if (!w || !h) return;
+  renderer.setSize(w, h, false);
+  camera.aspect = w / h; camera.updateProjectionMatrix();
+  bgUniforms.uAspect.value = w / h;
+  fitText();
+}
+new ResizeObserver(resize).observe(stage);
+
+/* ---- control tabs: [setting, label, min, max, step] or [setting, label, "text" | "bool" | "color"] ---- */
+const TABS = [
+  { name: "Main", items: [
+    ["loopLength", "Loop length (s)", 3, 40, 0.5], ["shots", "Shots", 1, 10, 1], ["speed", "Speed", 0, 3, 0.01], ["hue", "Hue", -180, 180, 1],
+    ["bgHeat", "Heat", -0.5, 0.5, 0.01], ["keyTopHeat", "Hot tops", -1, 1.5, 0.01], ["bgContrast", "Contrast", 0.2, 2, 0.01], ["bgWarp", "Warp", 0, 1.5, 0.01],
+    ["bgFlow", "Flow speed", 1, 4, 1], ["blur", "Blur", 0, 5, 0.01], ["floatDrift", "Float drift", 0, 4, 0.01], ["burstShare", "Keys that lift", 0, 1, 0.01],
+    ["burstHeight", "Burst height", 0, 6, 0.01], ["tumble", "Tumble", 0, 3, 0.01], ["keyOpacity", "Glass opacity", 0.2, 1, 0.01], ["edgeStrength", "Edge lines", 0, 1.5, 0.01] ] },
+  { name: "Type", items: [
+    ["showText", "Show text", "bool"], ["kicker", "Kicker", "text"], ["line1", "Headline 1", "text"], ["line2", "Headline 2", "text"], ["line3", "Headline 3", "text"],
+    ["title1", "Title 1", "text"], ["title2", "Title 2", "text"], ["textColor", "Colour", "color"], ["textScale", "Size", 0.5, 1.6, 0.01],
+    ["weight", "Weight", 400, 800, 100], ["slantAI", "Slant \u201cAI\u201d", "bool"], ["typeSpeed", "Type-on speed", 0.3, 3, 0.01] ] },
+  { name: "Music", items: [["volume", "Volume", 0, 1, 0.01]] },
+  { name: "Colour", items: [
+    ["hue", "Hue", -180, 180, 1], ["bgScale", "Pattern size", 0.3, 3, 0.01], ["bgContrast", "Contrast", 0.2, 2, 0.01],
+    ["bgHeat", "Heat", -0.5, 0.5, 0.01], ["heatAnim", "Heat swing", 0, 2, 0.01], ["bgWarp", "Warp", 0, 1.5, 0.01], ["bgFlow", "Flow speed", 1, 4, 1] ] },
+  { name: "Keys", items: [
+    ["keyOpacity", "Glass opacity", 0.2, 1, 0.01], ["keyTopHeat", "Hot tops", -1, 1.5, 0.01], ["keyHeat", "Heat", -0.5, 0.5, 0.01],
+    ["keyContrast", "Contrast", 0.2, 2.5, 0.01], ["keyPattern", "Pattern size", 0.05, 1.5, 0.01], ["keyNormal", "Facet shift", 0, 2, 0.01],
+    ["edgeStrength", "Edge lines", 0, 1.5, 0.01], ["rimStrength", "Rim glow", 0, 1.5, 0.01], ["edgeColor", "Edge colour", "color"], ["legendOpacity", "Legends", 0, 1, 0.01] ] },
+  { name: "Motion", items: [
+    ["speed", "Speed", 0, 3, 0.01], ["burstHeight", "Burst height", 0, 6, 0.01], ["burstShare", "Keys that lift", 0, 1, 0.01], ["tumble", "Tumble", 0, 3, 0.01],
+    ["floatDrift", "Float drift", 0, 4, 0.01], ["floatScale", "Float size", 0.3, 2, 0.01], ["blur", "Blur", 0, 5, 0.01], ["fov", "Lens", 15, 70, 0.1] ] },
+  { name: "Logos", items: [] },
+];
+function markMusic(id) { P.music = id; document.querySelectorAll("[data-track]").forEach(b => b.classList.toggle("on", b.dataset.track === id)); }
+function setMusic(id) {
+  if (!Music.set(id)) id = "off";
+  P.music = id; soundWanted = id !== "off"; if (id !== "off") lastTrack = id;
+  document.querySelectorAll("[data-track]").forEach(b => b.classList.toggle("on", b.dataset.track === id));
+}
+const REBUILD_TEXT = new Set(["showText", "kicker", "line1", "line2", "line3", "title1", "title2", "textColor", "weight", "slantAI"]);
+const refreshers = [];
+function refreshControls() { refreshers.forEach(f => f()); }
+{
+  const tabBar = el("tabs"), panels = el("panels");
+  const select = i => { [...tabBar.children].forEach((b, j) => b.setAttribute("aria-selected", j === i)); [...panels.children].forEach((p, j) => p.hidden = j !== i); };
+  TABS.forEach((tab, ti) => {
+    const btn = document.createElement("button"); btn.textContent = tab.name; btn.setAttribute("role", "tab"); btn.onclick = () => select(ti); tabBar.appendChild(btn);
+    const panel = document.createElement("div"); panel.className = "panel"; panel.setAttribute("role", "tabpanel"); panels.appendChild(panel);
+    tab.items.forEach(([key, label, a, b, step]) => {
+      const row = document.createElement("div"); row.className = "row";
+      const id = "ctl-" + ti + "-" + key, lab = document.createElement("label"); lab.textContent = label; lab.htmlFor = id; row.appendChild(lab);
+      const input = document.createElement("input"); input.id = id; row.appendChild(input);
+      const changed = () => { if (REBUILD_TEXT.has(key)) buildText(); if (key === "shots") { setShots(); refreshControls(); } refreshers.forEach(f => { if (f.key === key && f !== mine) f(); }); };
+      let mine = null;
+      if (typeof a === "number") {
+        input.type = "range"; input.min = a; input.max = b; input.step = step;
+        const out = document.createElement("output"); row.appendChild(out);
+        const show = () => { input.value = P[key]; out.textContent = (+P[key]).toFixed(step >= 1 ? 0 : step >= 0.1 ? 1 : 2); };
+        input.oninput = () => { P[key] = parseFloat(input.value); out.textContent = (+P[key]).toFixed(step >= 1 ? 0 : step >= 0.1 ? 1 : 2); changed(); };
+        show.key = key; mine = show; refreshers.push(show); show();
+      } else if (a === "bool") {
+        input.type = "checkbox"; input.onchange = () => { P[key] = input.checked; changed(); };
+        const show = () => { input.checked = P[key]; }; show.key = key; mine = show; refreshers.push(show); show();
+      } else {
+        input.type = a; input.oninput = () => { P[key] = input.value; changed(); };
+        const show = () => { input.value = P[key]; }; show.key = key; mine = show; refreshers.push(show); show();
+      }
+      panel.appendChild(row);
+    });
+    if (tab.name === "Logos") panel.appendChild(el("extras"));
+    if (tab.name === "Music") {
+      const bar = document.createElement("div"); bar.id = "tracks";
+      [["off", "Off"], ["ambient", "Ambient"], ["minimal", "Minimal"], ["tech", "Tech"], ["jungle", "Jungle"]].forEach(([id, name]) => {
+        const b = document.createElement("button"); b.textContent = name; b.dataset.track = id; b.onclick = () => setMusic(id); bar.appendChild(b);
+      });
+      panel.prepend(bar);
+    }
+  });
+  select(0); markMusic(P.music);
+}
+// Sound: the default track is cued on load. Browsers hold audio back until the first
+// tap, click or key press, so the first one anywhere on the page releases it.
+let lastTrack = P.music === "off" ? "ambient" : P.music, soundWanted = P.music !== "off";
+function wake() { if (soundWanted && !Music.running) { Music.set(P.music); Music.resume(); } }
+try { if (soundWanted) Music.set(P.music); } catch (e) {}
+for (const ev of ["click", "touchend", "pointerup", "keydown"]) window.addEventListener(ev, wake, true);
+el("sound").onclick = ev => {
+  ev.stopPropagation();
+  if (Music.running) { lastTrack = P.music; soundWanted = false; setMusic("off"); }
+  else { soundWanted = true; setMusic(P.music === "off" ? lastTrack : P.music); Music.resume(); }
+};
+function showSound() { const txt = Music.running ? "Sound on" : P.music === "off" ? "Sound off" : "Tap for sound", b = el("sound"); if (b.textContent !== txt) { b.textContent = txt; b.classList.toggle("on", Music.running); } }
+
+/* ---- logo slots, copy, reset ---- */
+function showLogos() {
+  const a = el("logoA"), b = el("logoB"), both = !a.hidden && !b.hidden;
+  el("logos").classList.toggle("empty", a.hidden && b.hidden);
+  el("logos").querySelector(".div").hidden = !both;
+}
+function bindLogo(inputId, imgId) {
+  el(inputId).onchange = ev => { const f = ev.target.files[0]; if (!f) return; const img = el(imgId); img.src = URL.createObjectURL(f); img.hidden = false; showLogos(); };
+}
+bindLogo("fileA", "logoA"); bindLogo("fileB", "logoB");
+el("clearLogos").onclick = () => { for (const id of ["logoA", "logoB"]) { el(id).hidden = true; el(id).removeAttribute("src"); } el("fileA").value = ""; el("fileB").value = ""; showLogos(); };
+el("copy").onclick = () => {
+  const text = JSON.stringify(P, null, 2), box = el("dump");
+  box.value = text; box.style.display = "block"; box.select();
+  try { navigator.clipboard.writeText(text).then(() => { el("copy").textContent = "Copied"; setTimeout(() => el("copy").textContent = "Copy settings", 1200); }).catch(() => {}); } catch (e) {}
+};
+el("reset").onclick = () => { Object.assign(P, DEFAULTS); SEQ = buildSequence(P.shots); head = 0; setAspect(P.aspect); setMusic(P.music); refreshControls(); buildText(); };
+
+/* ---- go ---- */
+buildText(); drawAtlas(); setAspect(P.aspect);
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { drawAtlas(); fitText(); });
+requestAnimationFrame(tick);
+</script>
+</body>
+</html>
