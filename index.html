@@ -38,7 +38,7 @@
      control's slider has a fixed slot under the playback bar, so nothing below ever moves. */
   #slot { display: none; }
   body.desk #app { max-width: none; }
-  body.desk #stagebox { height: min(calc((100vw - 20px) * 9 / 16), max(180px, calc(100vh - 128px))); display: flex; align-items: center; justify-content: center; }   /* full width at 16:9, but never so tall that the playback bar and slider leave the window */
+  body.desk #stagebox { height: min(calc((100vw - 20px) * 9 / 16), max(180px, calc(100vh - 340px))); display: flex; align-items: center; justify-content: center; }   /* full width at 16:9, but short enough that the tabs and first rows of dials show without scrolling */
   body.desk #slot { display: grid; grid-template-columns: 130px 1fr 64px; align-items: center; gap: 12px; height: 36px; margin-top: 4px; padding: 0 12px; border-radius: 8px; background: #14141f; font-size: 13px; font-weight: 600; }
   #slot .val { font: 12px ui-monospace, monospace; text-align: right; opacity: .75; }
   #slotRange { width: 100%; min-width: 0; margin: 0; accent-color: #ffe01f; cursor: pointer; }
